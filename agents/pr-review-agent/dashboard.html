@@ -1,0 +1,1183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review desk</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230071E3'/%3E%3Cpath d='M16 9v14M9 16h14' stroke='%2352c47e' stroke-width='3.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+/* Tokens: Apple's system palette. Wherever text sits on a colour it is the accessible variant, so every label
+   passes 4.5:1 on every surface, light and dark. The desks follow the system appearance. Orange always means your turn. */
+:root {
+  color-scheme: light;
+  --paper: #f5f5f7; --surface: #ffffff; --sunk: #f2f2f7; --ink: #1d1d1f; --ink-2: #424245; --ink-3: #6a6a6f;
+  --line: #d2d2d7; --line-soft: #e5e5ea; --ps: #0066cc; --ps-soft: #e9eff9; --sel: #e9eff9;
+  --done: #1f7a35; --good-soft: #eaf6ec; --turn: #a84b00; --turn-soft: #fff3e3; --bad: #d70015; --bad-soft: #ffeeee;
+  --fill: #0071e3; --fill-hover: #0077ed; --bad-fill: #d70015; --badge: #ff3b30; --focus: #0071e3; --focus-ring: rgba(0, 113, 227, .3);
+  --on-strong: #ffffff; --accent-ink: #0071e3;
+  --gray-fill: rgba(120, 120, 128, .12); --gray-fill-hover: rgba(120, 120, 128, .2); --gray-fill-soft: rgba(120, 120, 128, .07);
+  --seg-track: rgba(118, 118, 128, .12); --seg-thumb: #ffffff;
+  --material: rgba(245, 245, 247, .8); --material-strong: rgba(255, 255, 255, .9);
+  --r-s: 8px; --r-m: 14px; --radius-s: 8px; --radius-m: 14px;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --serif: var(--sans);
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --accent: #0066cc; --accent-soft: #e9eff9; --approve: #1f7a35; --changes: #d70015; --busy: #a84b00; --yours: #a84b00; --yours-soft: #fff3e3;
+  --add-bg: #e7f6ea; --del-bg: #ffeeee; --lane-0: #0066cc; --lane-1: #1f7a35; --lane-2: #a84b00; --lane-3: #8944ab;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --paper: #000000; --surface: #1c1c1e; --sunk: #2c2c2e; --ink: #f5f5f7; --ink-2: #c7c7cc; --ink-3: #a1a1a6;
+    --line: #38383a; --line-soft: #2c2c2e; --ps: #2997ff; --ps-soft: #1e2d44; --sel: #1e2d44;
+    --done: #30d158; --good-soft: #16301d; --turn: #ff9f0a; --turn-soft: #3a2a12; --bad: #ff6961; --bad-soft: #3b1c1c;
+    --focus: #2997ff; --focus-ring: rgba(41, 151, 255, .35);
+    --gray-fill: rgba(120, 120, 128, .24); --gray-fill-hover: rgba(120, 120, 128, .34); --gray-fill-soft: rgba(120, 120, 128, .14);
+    --seg-track: rgba(118, 118, 128, .24); --seg-thumb: #636366;
+    --material: rgba(22, 22, 23, .8); --material-strong: rgba(44, 44, 46, .9);
+    --accent: #2997ff; --accent-soft: #1e2d44; --approve: #30d158; --changes: #ff6961; --busy: #ff9f0a; --yours: #ff9f0a; --yours-soft: #3a2a12;
+    --add-bg: #16301d; --del-bg: #3b1c1c; --lane-0: #2997ff; --lane-1: #30d158; --lane-2: #ff9f0a; --lane-3: #bf5af2;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 15px/1.5 var(--sans);
+}
+button, input { font: inherit; color: inherit; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-s); }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+
+.wrap { max-width: 1440px; margin: 0 auto; padding: 0 28px 64px; --wrap-pb: 64px; }
+
+/* top bar */
+.top {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+  padding: 26px 0 18px;
+}
+.top h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+.agent-line { margin: 0; color: var(--ink-2); font-size: 14px; display: flex; align-items: center; gap: 10px; }
+.agent-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--approve); flex: none; }
+.agent-line[data-mode="paused"] .agent-dot { background: var(--ink-3); }
+.agent-line[data-mode="checking"] .agent-dot { background: var(--busy); animation: pulse 1.4s ease-in-out infinite; }
+.agent-line[data-mode="down"] .agent-dot { background: var(--changes); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.btn {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: var(--radius-s);
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--ink-3); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.btn.primary:hover { opacity: 0.9; }
+.btn.confirm { background: var(--changes); border-color: var(--changes); color: #fff; }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--ink-2); }
+.btn.quiet:hover { color: var(--ink); border-color: var(--line); }
+
+/* view switch + filter */
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+.switch { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m); padding: 3px; }
+.switch button {
+  border: 0; background: transparent; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+  font-size: 14px; font-weight: 500; color: var(--ink-2); display: inline-flex; align-items: center; gap: 8px;
+}
+.switch button[aria-selected="true"] { background: var(--ink); color: var(--surface); }
+.switch .count { font-variant-numeric: tabular-nums; opacity: 0.75; font-weight: 400; }
+.filter {
+  width: min(340px, 100%); border: 1px solid var(--line); background: var(--surface);
+  border-radius: var(--radius-s); padding: 7px 12px; font-size: 14px;
+}
+.notice { margin: 0 0 16px; padding: 10px 14px; border-radius: var(--radius-s); background: var(--del-bg); color: var(--ink); font-size: 14px; }
+
+/* lanes */
+.lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 20px; align-items: start; }
+.lanes[data-view]:not([data-view="all"]) { grid-template-columns: 1fr; }
+[hidden] { display: none !important; }
+.lane {
+  background: var(--surface);
+  border-radius: var(--radius-m);
+  border-top: 4px solid var(--lane);
+  min-width: 0;
+}
+.lane-head { padding: 16px 20px 12px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.lane-head h2 { margin: 0; font-size: 18px; font-weight: 600; color: var(--lane); }
+.lane-head p { margin: 0; color: var(--ink-2); font-size: 13px; }
+.group { border-top: 1px solid var(--line); }
+.group > h3 { margin: 0; padding: 12px 20px 4px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.group > p.hint { margin: 0; padding: 0 20px 6px; font-size: 13px; color: var(--ink-3); }
+.group ul { list-style: none; margin: 0; padding: 0 0 6px; }
+details.group > summary { list-style: none; cursor: pointer; padding: 12px 20px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+details.group > summary::-webkit-details-marker { display: none; }
+.empty { padding: 18px 20px 22px; color: var(--ink-2); font-size: 14px; }
+
+/* rows: the gutter mark is the one loud thing */
+.row { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 0 12px; padding: 6px 16px 6px 0; }
+.row + .row { border-top: 1px solid var(--sunk); }
+.gutter {
+  align-self: stretch; display: flex; align-items: center; justify-content: center;
+  font: 500 17px/1 var(--mono); color: var(--g, var(--ink-3)); background: color-mix(in srgb, var(--g, var(--ink-3)) 12%, transparent);
+  border-radius: 0 var(--radius-s) var(--radius-s) 0; min-height: 44px;
+}
+.row[data-state="ready"] { --g: var(--approve); }
+.row[data-state="ready"][data-verdict="REQUEST_CHANGES"] { --g: var(--changes); }
+.row[data-state="ready"][data-verdict="COMMENT"] { --g: var(--accent); }
+.row[data-state="reviewing"] { --g: var(--busy); }
+.row[data-state="reviewing"] .gutter { animation: pulse 1.6s ease-in-out infinite; }
+.row[data-state="failed"], .row[data-state="stopped"], .row[data-checks="bad"] { --g: var(--changes); }
+.row[data-state="posted"] { --g: var(--approve); }
+.row[data-state="not_reviewed"] .gutter, .row[data-state="draft_pr"] .gutter, .row[data-state="skipped"] .gutter { background: transparent; }
+.open {
+  all: unset; cursor: pointer; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: 4px 0;
+}
+.open:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-s); }
+.r-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.open:hover .r-title { text-decoration: underline; text-underline-offset: 3px; }
+.r-meta { font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-side { display: flex; align-items: center; gap: 10px; }
+.r-verdict { font-size: 13px; color: var(--g, var(--ink-2)); font-weight: 500; white-space: nowrap; }
+.diffstat { font-family: var(--mono); font-size: 12px; }
+.diffstat .a { color: var(--approve); }
+.diffstat .d { color: var(--changes); }
+
+/* activity */
+.activity { margin-top: 24px; background: var(--surface); border-radius: var(--radius-m); }
+.activity summary { cursor: pointer; padding: 12px 20px; font-size: 13px; font-weight: 600; color: var(--ink-2); list-style: none; }
+.activity summary::-webkit-details-marker { display: none; }
+.activity ol { list-style: none; margin: 0; padding: 0 20px 16px; font-size: 13px; color: var(--ink-2); }
+.activity li { padding: 3px 0; border-top: 1px solid var(--sunk); overflow-wrap: anywhere; }
+.activity time { color: var(--ink-3); margin-right: 10px; font-variant-numeric: tabular-nums; }
+
+/* drawer */
+.scrim { position: fixed; inset: 0; background: rgba(15, 20, 28, 0.35); opacity: 0; pointer-events: none; transition: opacity .2s; }
+.scrim.on { opacity: 1; pointer-events: auto; }
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(760px, 100%);
+  background: var(--surface); box-shadow: -8px 0 32px rgba(15, 20, 28, 0.18);
+  transform: translateX(102%); transition: transform .22s ease-out;
+  display: flex; flex-direction: column; z-index: 10;
+}
+.drawer.on { transform: none; }
+.d-head { padding: 22px 28px 16px; border-bottom: 1px solid var(--line); border-top: 4px solid var(--lane, var(--ink)); }
+.d-head .where { margin: 0 0 4px; color: var(--ink-2); font-size: 13px; }
+.d-head h2 { margin: 0 0 6px; font-size: 20px; font-weight: 600; line-height: 1.3; }
+.d-head .by { margin: 0; color: var(--ink-2); font-size: 14px; }
+.d-close { position: absolute; top: 16px; right: 18px; }
+.d-body { flex: 1; overflow-y: auto; padding: 8px 28px 28px; }
+.d-body section { padding: 16px 0; border-bottom: 1px solid var(--sunk); }
+.d-body h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; }
+.verdict-line { font-size: 16px; font-weight: 600; color: var(--g, var(--ink)); display: flex; align-items: center; gap: 10px; }
+.verdict-line .mark { font-family: var(--mono); font-size: 20px; }
+.prose { max-width: 72ch; }
+.prose p { margin: 0 0 10px; }
+.prose ul { margin: 0 0 10px; padding-left: 20px; }
+.prose h4 { margin: 14px 0 6px; font-size: 14px; }
+.prose code { background: var(--sunk); padding: 1px 4px; border-radius: 3px; }
+.prose pre { background: var(--sunk); padding: 10px 12px; border-radius: var(--radius-s); overflow-x: auto; margin: 0 0 10px; }
+.prose pre code { background: none; padding: 0; font-size: 13px; }
+.comment { border: 1px solid var(--line); border-radius: var(--radius-m); margin-bottom: 12px; overflow: hidden; }
+.comment > header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; background: var(--sunk); border-bottom: 1px solid var(--line); }
+.comment > header code { font-size: 13px; overflow-wrap: anywhere; }
+.tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.tag.blocking { color: var(--changes); background: var(--del-bg); }
+.tag.minor { color: var(--ink-2); background: var(--paper); }
+.comment .prose { padding: 10px 12px 2px; max-width: none; }
+.diff { margin: 0 0 10px; border: 1px solid var(--line); border-radius: var(--radius-s); overflow-x: auto; font: 13px/1.55 var(--mono); }
+.diff .cap { font-family: var(--sans); font-size: 12px; color: var(--ink-2); padding: 4px 10px; border-bottom: 1px solid var(--line); }
+.diff div.l { white-space: pre; padding: 0 10px 0 0; }
+.diff div.l::before { display: inline-block; width: 22px; text-align: center; color: var(--ink-3); }
+.diff .del { background: var(--del-bg); }
+.diff .del::before { content: "−"; }
+.diff .add { background: var(--add-bg); }
+.diff .add::before { content: "+"; }
+.checks.ok { color: var(--approve); }
+.checks.bad { color: var(--changes); }
+.resume { display: flex; gap: 8px; align-items: center; }
+.resume code { flex: 1; background: var(--sunk); padding: 6px 8px; border-radius: var(--radius-s); overflow-x: auto; white-space: nowrap; }
+.d-foot { padding: 14px 28px; border-top: 1px solid var(--line); display: flex; gap: 8px; flex-wrap: wrap; background: var(--surface); }
+.d-foot .spacer { flex: 1; }
+.error-box { background: var(--del-bg); padding: 10px 12px; border-radius: var(--radius-s); white-space: pre-wrap; font-size: 13px; overflow-wrap: anywhere; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0;
+  background: var(--ink); color: var(--surface); padding: 10px 16px; border-radius: var(--radius-m);
+  font-size: 14px; transition: opacity .2s, transform .2s; z-index: 20; max-width: min(560px, 92vw);
+}
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+.toast a { color: inherit; }
+
+.picker { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.picker label { font-size: 13px; color: var(--ink-2); display: flex; gap: 6px; align-items: center; }
+select { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-s); padding: 5px 8px; }
+.modal-scrim { position: fixed; inset: 0; background: rgba(15, 20, 28, 0.35); z-index: 30; }
+.modal { position: fixed; top: 12vh; left: 50%; transform: translateX(-50%); width: min(560px, calc(100vw - 32px));
+  background: var(--surface); border-radius: var(--radius-m); box-shadow: 0 16px 48px rgba(15, 20, 28, 0.25); z-index: 31; padding: 22px 24px 18px; }
+.modal h2 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+.modal p { margin: 0 0 14px; color: var(--ink-2); font-size: 14px; max-width: 60ch; }
+.modal .job { padding: 14px 0; border-top: 1px solid var(--sunk); }
+.modal .job h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
+.modal .models { font-size: 13px; color: var(--ink-2); padding: 12px 0 4px; border-top: 1px solid var(--sunk); }
+.modal footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.next-run { font-size: 13px; color: var(--ink-2); margin: 8px 0 0; }
+.r-verdict.live { color: var(--busy); max-width: 340px; overflow: hidden; text-overflow: ellipsis; }
+.r-verdict.live.quiet { color: var(--ink-3); }
+.live-head { margin: 0 0 8px; font-size: 14px; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
+.live-head.on::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--busy); animation: pulse 1.4s ease-in-out infinite; flex: none; }
+.live-steps { list-style: none; margin: 0; padding: 0; font-size: 13.5px; }
+.live-steps li { display: grid; grid-template-columns: 84px 1fr; gap: 10px; padding: 4px 0; border-top: 1px solid var(--sunk); }
+.live-steps li:first-child { border-top: 0; font-weight: 500; }
+.live-steps li.helper span::before { content: "helper · "; color: var(--ink-3); }
+.live-steps time { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.link { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+/* one chevron for every folding section: centred on the summary's first line, it turns in place */
+:is(details.group, details.activity, .d-body details) > summary { display: flex; align-items: flex-start; gap: 8px; list-style: none; }
+:is(details.group, details.activity, .d-body details) > summary::-webkit-details-marker { display: none; }
+:is(details.group, details.activity, .d-body details) > summary::before { content: ""; flex: none; box-sizing: border-box; width: 7px; height: 7px; margin-top: calc(0.5lh - 3.5px);
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateX(-1px) rotate(-45deg); transition: transform .15s ease; }
+:is(details.group, details.activity, .d-body details)[open] > summary::before { transform: translateY(-1.5px) rotate(45deg); }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before { animation: none !important; transition: none !important; }
+}
+@media (max-width: 1100px) {
+  .lanes { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  .wrap { padding: 0 16px 48px; --wrap-pb: 48px; }
+  .switch { width: 100%; }
+  .switch button { flex: 1; justify-content: center; padding: 6px 8px; white-space: nowrap; }
+  .switch .count { display: none; }
+  .top { grid-template-columns: 1fr; gap: 10px; }
+  .row { grid-template-columns: 30px 1fr; }
+  .r-side { grid-column: 2; padding-bottom: 6px; flex-wrap: wrap; }
+  .d-head, .d-body, .d-foot { padding-left: 18px; padding-right: 18px; }
+}
+
+/* desk system: shared by both desks. A sticky status header, one glance strip that says what needs you,
+   then the working lists. State is shown as a glyph or chip as well as a colour. */
+.top {
+  position: sticky; top: 0; z-index: 5;
+  background: color-mix(in srgb, var(--paper) 90%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(10px); backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid transparent; transition: border-color .2s;
+}
+.top.stuck { border-bottom-color: var(--line); }
+.brand { display: flex; align-items: center; gap: 10px; margin: 0; }
+.brand svg { width: 26px; height: 26px; flex: none; display: block; }
+.brand small { display: block; font-size: 12px; font-weight: 500; color: var(--ink-3); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.2; }
+.status-pill {
+  display: inline-flex; align-items: center; gap: 9px; padding: 4px 12px 4px 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); max-width: 100%;
+}
+.status-pill > span:last-child { min-width: 0; }
+
+.btn { transition: border-color .15s, background-color .15s, opacity .15s; }
+.btn:not(:disabled):active { transform: translateY(1px); }
+.btn:not(.primary):not(.quiet):not(.confirm):not(.warn):hover { background: var(--sunk); }
+
+/* at a glance: one object, divided, so it reads as a single summary and not five cards */
+.glance {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m, 8px);
+  margin: 0 0 20px; overflow: hidden;
+}
+.tile {
+  all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; padding: 12px 16px 13px;
+  border-left: 1px solid var(--line); margin-left: -1px; min-width: 0; position: relative;
+}
+button.tile { cursor: pointer; }
+button.tile:hover { background: var(--sunk); }
+button.tile:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.tile .k { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; color: var(--ink-2); letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .k i { font: normal 500 13px/1 var(--mono); color: var(--t, var(--ink-3)); width: 12px; text-align: center; flex: none; }
+.tile .v { font: 500 26px/1.15 var(--sans); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--ink); }
+.tile .v.zero { color: var(--ink-3); }
+.tile .s { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile[data-hot]::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--t); }
+
+.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { from { box-shadow: inset 0 0 0 2px var(--focus); } to { box-shadow: inset 0 0 0 2px transparent; } }
+@media (prefers-reduced-motion: reduce) { .top { transition: none; } }
+/* on a phone the header is too tall to keep on screen */
+@media (max-width: 720px) { .top { position: static; } }
+
+.wrap { --gutter: 28px; padding-inline: var(--gutter); }
+.top { margin-inline: calc(-1 * var(--gutter)); padding-inline: var(--gutter); margin-bottom: 4px; }
+.top .status-pill { justify-self: start; }
+.lanes { grid-template-columns: repeat(auto-fit, minmax(min(440px, 100%), 1fr)); }
+.scrim { z-index: 9; }
+.group { scroll-margin-top: calc(var(--head-h, 72px) + 12px); }
+.row { transition: background-color .12s; }
+.row:hover { background: color-mix(in srgb, var(--sunk) 70%, transparent); }
+.row[data-state="ready"] .r-verdict { padding: 2px 9px; border-radius: 999px; background: color-mix(in srgb, var(--g) 13%, transparent); }
+.btn.confirm { color: var(--on-strong); }
+.d-head { position: relative; }
+@media (max-width: 720px) {
+  .wrap { --gutter: 16px; }
+  .top .actions { width: 100%; }
+}
+
+/* ---------- the desk's own look, the same system as the ticket desk ----------
+   Interface and what a reviewer wrote in the system font (SF on a Mac), mono only for code.
+   The gutter at the left of each PR is the turn rail: amber is yours to post, ink-blue the agent reviewing. */
+body { -webkit-font-smoothing: antialiased; }
+.top h1 { font-size: 21px; }
+.brand small { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 400; color: var(--ink-3); display: block; margin-top: 1px; }
+.glance { display: block; background: none; border: 0; border-radius: 0; margin: 2px 0 18px; padding: 0; overflow: visible; }
+.glance .say { margin: 0; font-size: 17px; line-height: 1.45; color: var(--ink-2); max-width: 90ch; }
+.glance .say strong { color: var(--ink); font-weight: 600; }
+.glance .say button { all: unset; cursor: pointer; color: var(--ink); font-weight: 600; text-decoration: underline;
+  text-decoration-color: var(--line); text-underline-offset: 4px; text-decoration-thickness: 2px; }
+.glance .say button:hover { text-decoration-color: currentColor; }
+.glance .say button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+.glance .say .you { color: var(--yours); }
+.glance .say .bad { color: var(--changes); }
+.glance .say .spent { color: var(--ink-3); font-size: 14px; white-space: nowrap; }
+.lane, .activity { background: var(--surface); border: 1px solid var(--line); box-shadow: none; border-top: 1px solid var(--line); border-radius: var(--radius-m); }
+.lane-head h2 { color: var(--ink); font-size: 16px; }
+.row { grid-template-columns: 14px 1fr auto; padding: 10px 18px 10px 0; }
+.row + .row { border-top-color: var(--line-soft); }
+.gutter { font-size: 0; width: 4px; align-self: stretch; margin: 2px 0; border-radius: 0 3px 3px 0; background: transparent; }
+.row[data-state="ready"] .gutter { background: var(--yours); }
+.row[data-state="reviewing"] .gutter { background: var(--accent); }
+.row[data-state="failed"] .gutter, .row[data-state="stopped"] .gutter, .row[data-checks="bad"] .gutter { background: var(--changes); }
+.row[data-state="posted"] .gutter { background: color-mix(in srgb, var(--approve) 55%, transparent); }
+.r-title { font-size: 15px; }
+.r-meta { font-size: 13.5px; color: var(--ink-3); }
+.r-verdict { font-size: 13px; }
+.drawer { border-left: 1px solid var(--line); box-shadow: -24px 0 64px rgba(20, 24, 30, 0.14); }
+.d-head { border-top: 0; padding: 24px 30px 18px; }
+.d-head h2 { font-size: 22px; letter-spacing: -0.012em; line-height: 1.25; }
+.d-body { padding: 8px 30px 30px; }
+.d-body section { border-bottom-color: var(--line-soft); padding: 18px 0; }
+.d-body h3 { font-size: 15px; }
+.verdict-line .mark { display: none; }
+.prose, .comment .prose { font-family: var(--serif); font-size: 15.5px; line-height: 1.55; }
+.comment { border-radius: var(--radius-m); }
+.comment > header { background: var(--paper); }
+.tag { border-radius: 999px; font-size: 12.5px; }
+.diff { border-radius: var(--radius-s); font-size: 12.5px; }
+.btn { border-radius: var(--radius-s); padding: 7px 14px; font-size: 14.5px; font-weight: 600; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-strong); }
+.switch { border-radius: var(--radius-s); }
+.switch button[aria-pressed="true"], .switch button[aria-selected="true"] { background: var(--ink); color: var(--surface); }
+.filter, input[type="search"] { border-radius: var(--radius-s); }
+.status-pill { border: 0; background: none; padding: 0; }
+.modal { border-radius: var(--radius-m); box-shadow: 0 24px 64px rgba(20, 24, 30, 0.22); }
+@media (prefers-reduced-motion: reduce) { .row[data-state="reviewing"] .gutter { animation: none !important; } }
+
+/* ---------- the app frame: a real header and footer, shared by both desks ----------
+   Row one is the product: the mark and the switch between desks. Row two is this desk: its name, what the
+   agent is doing, and its actions. The footer says what the desks will and won't do, and which version runs. */
+.top { display: block; padding: 0 var(--gutter, 28px); gap: 0; background: var(--paper); border-bottom: 1px solid var(--line);
+  -webkit-backdrop-filter: none; backdrop-filter: none; margin-bottom: 20px; grid-template-columns: none; }
+.top.stuck { box-shadow: 0 1px 0 var(--line), 0 6px 16px -12px rgba(20, 24, 30, 0.25); }
+.bar-1 { display: flex; align-items: center; gap: 18px; height: 52px; border-bottom: 1px solid var(--line-soft); }
+.mark { display: flex; align-items: center; gap: 10px; flex: none; border-radius: 8px; color: var(--ink); text-decoration: none; padding-right: 14px; border-right: 1px solid var(--line-soft); }
+.mark-name { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.mark svg { width: 28px; height: 28px; display: block; }
+.mark:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.desks { display: flex; align-self: stretch; gap: 4px; }
+.desks a, .desks span { display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; font-size: 14.5px; font-weight: 600;
+  color: var(--ink-2); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.desks a:hover { color: var(--ink); }
+.desks [aria-current="page"] { color: var(--ink); border-bottom-color: var(--ink); }
+.desks .off { color: var(--ink-3); font-weight: 500; cursor: default; }
+.desks .n { font-size: 12px; font-weight: 700; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
+  display: inline-grid; place-items: center; background: var(--yours-soft, var(--turn-soft)); color: var(--yours, var(--turn)); font-variant-numeric: tabular-nums; }
+.desks .n:empty { display: none; }
+.bar-2 { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 28px; padding: 16px 0 16px; }
+.who h1 { margin: 0; font-size: 24px; line-height: 1.15; font-weight: 600; letter-spacing: -0.015em; }
+.who .sub { display: block; margin-top: 2px; font-size: 13.5px; color: var(--ink-3); }
+.bar-2 .lines { min-width: 0; padding-left: 22px; border-left: 1px solid var(--line); }
+.bar-2 .acts, .bar-2 .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.brand { display: none; }
+
+.foot { margin: 48px calc(-1 * var(--gutter, 28px)) 0; margin-bottom: calc(-1 * var(--wrap-pb, 48px)); padding: 20px var(--gutter, 28px) 22px; background: var(--sunk); border-top: 1px solid var(--line); display: flex; justify-content: space-between;
+  align-items: baseline; gap: 12px 28px; flex-wrap: wrap; font-size: 13.5px; color: var(--ink-3); }
+.foot p { margin: 0; max-width: 70ch; color: var(--ink-2); }
+.foot-meta { display: flex; gap: 18px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.foot kbd { font: 600 12px/1 var(--sans); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); }
+
+@media (max-width: 1100px) { .bar-2 { grid-template-columns: minmax(0, 1fr) auto; } .bar-2 .lines { grid-column: 1 / -1; grid-row: 2; padding-left: 0; border-left: 0; } }
+@media (max-width: 720px) {
+  .bar-1 { gap: 10px; } .desks a, .desks span { padding: 0 8px; }
+  .bar-2 { grid-template-columns: minmax(0, 1fr); gap: 12px; } .bar-2 .acts, .bar-2 .actions { justify-content: flex-start; }
+  .who h1 { font-size: 21px; }
+}
+
+/* phone: the product name goes, the mark stays; the footer sits at the bottom of short pages */
+@media (max-width: 560px) { .mark-name { display: none; } .mark { padding-right: 10px; } .bar-1 { gap: 8px; } .desks a, .desks span { padding: 0 7px; font-size: 14px; } }
+body { min-height: 100vh; display: flex; flex-direction: column; }
+body > .wrap { flex: 1 0 auto; width: 100%; display: flex; flex-direction: column; }
+body > .wrap > .foot { margin-top: auto; }
+body > .wrap > .foot { margin-top: max(48px, auto); }
+
+/* ---------- Apple layer: the same text in both desks, keep it that way ----------
+   SF system type, Apple's system colours (the accessible variants wherever text sits on them), grouped surfaces,
+   capsule buttons, segmented switches and a translucent toolbar. It follows the system appearance and Increase Contrast. */
+body { font: 400 14px/1.45 var(--sans); letter-spacing: -0.003em; background: var(--paper); -webkit-font-smoothing: antialiased; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* the toolbar: translucent, one row on a wide window */
+.top { position: sticky; top: 0; z-index: 5; background: var(--material); border-bottom: 1px solid var(--line-soft); margin-bottom: 18px;
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); }
+.top.stuck { box-shadow: none; border-bottom-color: var(--line); }
+.bar-1 { height: 48px; gap: 14px; border-bottom: 0; }
+.mark { border-right: 0; padding-right: 2px; }
+.mark-name { font-size: 15px; font-weight: 600; letter-spacing: -0.015em; }
+.mark svg rect { rx: 7.5; }
+.desks { align-self: center; gap: 0; padding: 2px; border-radius: 9px; background: var(--seg-track); }
+.desks a, .desks span { height: 28px; margin: 0; padding: 0 14px; border: 0; border-radius: 7px; font-size: 13px; font-weight: 500; color: var(--ink); }
+.desks a:hover { color: var(--ink); background: var(--gray-fill-soft); }
+.desks [aria-current="page"] { background: var(--seg-thumb); box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 0 0 .5px rgba(0, 0, 0, .06); }
+.desks .off { color: var(--ink-3); font-weight: 400; }
+.desks .n { min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; font-weight: 700; background: var(--badge); color: #fff; }
+.bar-2 { gap: 20px; padding: 8px 0 14px; }
+.who h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.022em; }
+.who .sub { font-size: 13px; color: var(--ink-3); }
+.bar-2 .lines { padding-left: 0; border-left: 0; }
+.line { font-size: 13px; color: var(--ink-2); }
+.line > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dot { width: 8px; height: 8px; }
+@media (max-width: 999px) { .top { position: static; } }
+@media (min-width: 1000px) {
+  .top { display: flex; flex-wrap: nowrap; align-items: center; gap: 16px; min-height: 56px; }
+  .bar-1, .bar-2 { display: contents; }
+  .who { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .bar-2 .lines { flex: 1; min-width: 0; padding: 8px 0; gap: 1px; }
+  .bar-2 .acts, .bar-2 .actions { flex: none; flex-wrap: nowrap; }
+}
+
+/* buttons: capsules, one filled primary, the rest a soft gray fill */
+.btn { min-height: 30px; padding: 6px 15px; border: 0; border-radius: 999px; background: var(--gray-fill); color: var(--ink);
+  font-size: 13.5px; font-weight: 500; letter-spacing: -0.01em; box-shadow: none; transition: background-color .15s, opacity .15s, transform .1s; }
+.btn:not(.primary):not(.quiet):not(.confirm):not(.warn):hover { background: var(--gray-fill-hover); }
+.btn:not(:disabled):active { transform: scale(.97); opacity: .8; }
+.btn.primary { background: var(--fill); color: #fff; font-weight: 600; }
+.btn.primary:hover { background: var(--fill-hover); opacity: 1; }
+.btn.warn, .btn.confirm { background: var(--bad-fill); color: #fff; }
+.btn.quiet { background: transparent; color: var(--ps); }
+.btn.quiet:hover { background: var(--gray-fill); color: var(--ps); }
+.btn.small { min-height: 26px; padding: 4px 12px; font-size: 12.5px; }
+a.btn { display: inline-flex; align-items: center; text-decoration: none; }
+.linklike, .link { color: var(--ps); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+
+/* segmented controls: Sprint or Stage, the review desk's organisations, the ticket's tabs */
+.seg, .switch, .tabs { display: inline-flex; gap: 0; padding: 2px; border: 0; border-radius: 9px; background: var(--seg-track); }
+.seg button, .switch button, .tabs button { padding: 4px 14px; border: 0; border-radius: 7px; background: transparent; color: var(--ink);
+  font-size: 13px; font-weight: 500; letter-spacing: -0.005em; }
+.seg button[aria-pressed="true"], .switch button[aria-pressed="true"], .switch button[aria-selected="true"], .tabs button[aria-selected="true"] {
+  background: var(--seg-thumb); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 0 0 .5px rgba(0, 0, 0, .06); }
+.tabs { margin: 16px 0 0; flex-wrap: wrap; }
+.tabs .count, .switch .count { padding: 0; border: 0; background: none; color: var(--ink-3); opacity: 1; }
+
+/* fields */
+textarea, select, .par input { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
+.filter, input[type="search"] { border: 1px solid transparent; border-radius: 999px; padding: 7px 14px; background: var(--gray-fill); }
+textarea:focus, select:focus, .par input:focus, .filter:focus { outline: none; border-color: var(--fill); box-shadow: 0 0 0 3px var(--focus-ring); }
+
+/* chips and badges: capsules on a soft fill */
+.chip, .badge, .tag, .count { border: 0; border-radius: 999px; background: var(--gray-fill); color: var(--ink-2); font-size: 12px; font-weight: 500; }
+.prio { border: 0; border-radius: 999px; font: 600 11px/1 var(--sans); padding: 4px 7px; }
+
+/* grouped surfaces: white sheets on the gray page, no hard borders */
+.list, .pane, .lane, .activity { border: 0; border-radius: 14px; background: var(--surface); box-shadow: 0 0 0 1px var(--line-soft); }
+.list-head h2, .lane-head h2 { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+.group { border-top: 0; }
+.group > h3, details.group > summary { padding: 14px 20px 6px; font-size: 13px; font-weight: 600; color: var(--ink-3); text-transform: none; letter-spacing: 0; }
+.group ul { padding: 0 8px 8px; }
+
+/* rows: a rounded selection inset in the sheet, like a sidebar; the turn mark stays at the left */
+.t { border-radius: 10px; padding: 10px 14px 10px 20px; }
+.t:hover { background: var(--gray-fill-soft); }
+.t[aria-current="true"] { background: var(--sel); }
+.t::before { left: 7px; top: 12px; bottom: 12px; width: 3px; border-radius: 3px; }
+.t-title { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+.t-key, .t-meta { font-family: var(--sans); font-size: 12.5px; color: var(--ink-3); }
+.t-phase { font-size: 12.5px; }
+.row { border-radius: 10px; }
+.row + .row { border-top: 0; }
+.row:hover { background: var(--gray-fill-soft); }
+.r-title { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+.r-meta { font-size: 12.5px; color: var(--ink-3); }
+.gutter { width: 3px; margin: 10px 0 10px 7px; border-radius: 3px; }
+
+/* the ticket pane and the review drawer */
+.p-head { padding: 20px 24px 14px; border-bottom: 1px solid var(--line-soft); }
+.p-head h2, .d-head h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.022em; }
+.key-link { font-family: var(--sans); font-weight: 600; color: var(--ps); }
+.p-body { padding: 4px 24px 24px; }
+.p-body section { border-bottom-color: var(--line-soft); }
+.p-body h3, .d-body h3 { font-size: 15px; font-weight: 600; letter-spacing: -0.012em; }
+.track span { background: var(--gray-fill); }
+.track-labels { font-size: 12px; color: var(--ink-3); }
+.drawer { border-left: 1px solid var(--line-soft); box-shadow: none; }
+.drawer.on { box-shadow: -20px 0 60px rgba(0, 0, 0, .16); }
+.fb, .comment, .repo-card, details.runpick, .diff, .evidence-card { border-color: var(--line-soft); border-radius: 12px; }
+.d-head { border-bottom-color: var(--line-soft); }
+
+/* callouts: soft tinted cards, the title says what kind */
+.callout { border: 0; border-radius: 12px; padding: 16px 18px; }
+.callout.info { background: var(--sunk); }
+.callout.good { background: var(--good-soft); }
+.callout.bad { background: var(--bad-soft); }
+.callout.turn { background: var(--turn-soft); }
+.callout h3 { font-size: 15px; font-weight: 600; letter-spacing: -0.012em; }
+.callout > p:first-of-type, .prose, .jira, .fb-body, .diag-sum, .diag-dl dd, .ctx p, .repo-card > p, .steps li, .questions li, .fix-text,
+.tell-reply, .comment .prose { font-family: var(--sans); font-size: 14.5px; line-height: 1.55; letter-spacing: -0.006em; }
+.failure .diag { border: 0; border-radius: 10px; background: var(--surface); }
+code, .p-body code, .mono { font-family: var(--mono); font-size: 12.5px; }
+.p-body code { border-radius: 5px; background: var(--gray-fill); }
+
+/* the composer: a rounded field between a round attach button and a round send button, like Messages */
+.tell-dock { padding: 10px 20px 12px; background: var(--material); border-top: 1px solid var(--line-soft); box-shadow: none;
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-radius: 0 0 14px 14px; }
+.composer { align-items: flex-end; gap: 8px; }
+.composer textarea { min-height: 38px; padding: 8px 16px; border-radius: 19px; font-size: 14px; line-height: 20px; }
+.attach { width: 36px; height: 36px; min-height: 36px; margin-bottom: 1px; border: 0; border-radius: 50%; background: var(--gray-fill); color: var(--ink-2); }
+.attach:hover { background: var(--gray-fill-hover); color: var(--ink); }
+.composer .send { display: grid; place-items: center; width: 36px; height: 36px; min-height: 36px; margin-bottom: 1px; padding: 0; border-radius: 50%; }
+.composer .send svg { width: 18px; height: 18px; }
+.composer .send:disabled { background: var(--gray-fill); color: var(--ink-3); opacity: 1; }
+.tell-dock .hint { margin: 6px 0 0 44px; font-size: 12px; color: var(--ink-3); }
+.suggest { display: none; gap: 6px; flex-wrap: wrap; margin: 0 0 8px 44px; }
+.tell-dock:focus-within:has(textarea:placeholder-shown) .suggest { display: flex; }
+.suggest button { padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ps);
+  font-size: 12.5px; font-weight: 500; cursor: pointer; }
+.suggest button:hover { background: var(--gray-fill-soft); }
+
+/* the conversation: what you wrote on the right in blue, the agent's answer on the left in gray */
+.tell-card, .tell-card.done, .tell-card.thinking, .tell-card.failed { padding: 0; border: 0; background: transparent; }
+.tell-you { width: fit-content; max-width: 82%; margin: 0 0 8px auto; padding: 8px 14px; border: 0; border-radius: 18px; background: var(--fill);
+  color: #fff; font-size: 14px; line-height: 1.45; }
+.tell-reply, .tell-card .live-head { width: fit-content; max-width: 88%; margin: 0 0 8px; padding: 10px 14px; border-radius: 18px; background: var(--sunk); }
+.tell-card.failed .tell-reply { background: var(--bad-soft); }
+.tell-plan { margin: 4px 0 10px; padding-left: 22px; font-size: 14px; }
+.tell-thread { padding: 8px 26px 4px; }
+.exchange { margin: 0 0 20px; }
+.tell-when { margin: 0 0 8px; text-align: center; font-size: 11.5px; font-weight: 500; color: var(--ink-3); }
+.tell-you { white-space: pre-wrap; overflow-wrap: anywhere; }
+.tell-reply { overflow-wrap: anywhere; }
+.tell-status { margin: 2px 0 0 4px; font-size: 12px; color: var(--ink-3); }
+.tell-status.done { color: var(--done); font-weight: 500; }
+.tell-status:empty { display: none; }
+.tell-more { margin: 2px 0 0 4px; }
+.tell-more > summary { cursor: pointer; width: fit-content; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.tell-more[open] > summary { margin-bottom: 6px; }
+.tell-earlier { display: block; margin: 0 auto 16px; padding: 4px 12px; border: 0; border-radius: 999px; background: var(--gray-fill);
+  color: var(--ps); font-size: 12.5px; font-weight: 500; cursor: pointer; }
+.plan-cost { margin: 6px 0 0; font-size: 12.5px; color: var(--ink-3); }
+
+/* the sentence at the top: each count is a phrase you can click, with room to hit it */
+.glance .say { font-size: 17px; line-height: 1.47; letter-spacing: -0.022em; color: var(--ink-2); }
+.glance .say button { display: inline-block; padding: 3px 4px; margin: -3px -4px; border-radius: 6px; color: var(--ps); font-weight: 600; text-decoration: none; }
+.glance .say button:hover { background: var(--gray-fill-soft); }
+.glance .say .you { color: var(--turn); }
+.glance .say .bad { color: var(--bad); }
+
+/* the rest */
+.modal { border-radius: 14px; box-shadow: 0 20px 60px rgba(0, 0, 0, .22), 0 0 0 1px var(--line-soft); }
+.toast { border-radius: 14px; background: var(--material-strong); color: var(--ink); box-shadow: 0 10px 30px rgba(0, 0, 0, .18), 0 0 0 1px var(--line-soft);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); }
+.foot { background: transparent; border-top: 1px solid var(--line-soft); font-size: 12px; color: var(--ink-3); }
+.foot p { color: var(--ink-3); }
+@media (prefers-contrast: more) {
+  :root { --ink-2: var(--ink); --ink-3: var(--ink); --line: #8e8e93; --line-soft: #aeaeb2; --gray-fill: rgba(120, 120, 128, .3);
+    --seg-track: rgba(118, 118, 128, .3); --material: var(--surface); --material-strong: var(--surface); }
+  .btn, .chip, .badge, .tag, .seg, .switch, .tabs, .attach { box-shadow: inset 0 0 0 1px var(--line); }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top" role="banner">
+    <div class="bar-1">
+      <a class="mark" href="#" aria-label="Agent desks" title="Agent desks"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent-ink)"/><path d="M9 11.5h8M9 16h14M9 20.5h10" stroke="var(--on-strong)" stroke-width="2.4" stroke-linecap="round"/><circle cx="22.5" cy="11.5" r="2.2" fill="var(--on-strong)"/></svg><span class="mark-name">Agent desks</span></a>
+      <nav class="desks" id="deskNav" aria-label="Desks"></nav>
+    </div>
+    <div class="bar-2">
+      <div class="who"><h1>Reviews</h1><span class="sub">Review requests on GitHub</span></div>
+      <div class="lines">
+        <p class="line agent-line" id="agentLine" data-mode="idle"><span class="agent-dot dot"></span><span id="agentText">Loading…</span></p>
+      </div>
+      <div class="acts">
+      <button class="btn" id="checkNow">Check GitHub now</button>
+      <button class="btn" id="pauseBtn">Pause agent</button>
+      <button class="btn" id="settingsBtn">Run settings</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="glance" id="glance" aria-label="At a glance"></section>
+  <div class="bar">
+    <div class="switch" role="tablist" aria-label="Organization" id="switch"></div>
+    <input class="filter" id="filter" type="search" placeholder="Filter by repo, title or author" aria-label="Filter reviews">
+  </div>
+  <p class="notice" id="ghNotice" hidden></p>
+
+  <main class="lanes" id="lanes" data-view="all"></main>
+
+  <details class="activity" id="activity">
+    <summary>Agent activity</summary>
+    <ol id="activityList"></ol>
+  </details>
+  <footer class="foot" role="contentinfo">
+    <p id="footText">Runs on this machine only. Nothing is posted, pushed or written to the tracker until you press the button for it.</p>
+    <p class="foot-meta"><span id="footVersion"></span><span id="footHelp"></span></p>
+  </footer>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle" aria-hidden="true"></aside>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal-scrim" id="settingsScrim" hidden></div>
+<section class="modal" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden></section>
+
+<script>
+const TOKEN = new URLSearchParams(location.search).get("t") || "";
+// each org gets a lane colour by its place in the config
+const laneVar = org => { const i = (data?.orgs || []).findIndex(o => o.org === org); return i < 0 ? "var(--ink)" : `var(--lane-${i % 4})`; };
+const GROUPS = [
+  { id: "ready", title: "Ready to post", states: ["ready"] },
+  { id: "reviewing", title: "Reviewing now", states: ["reviewing"] },
+  { id: "next", title: "Up next", states: ["queued", "new_commits"], hint: "The agent drafts these at its next check." },
+  { id: "attention", title: "Needs attention", states: ["failed", "stopped"] },
+  { id: "backlog", title: "Not reviewed yet", states: ["not_reviewed", "draft_pr"], hint: "Requested before the agent started. Start a review when you want one." },
+  { id: "done", title: "Done this week", states: ["posted", "skipped"], collapsed: true },
+];
+const MARK = { ready: "+", reviewing: "◌", queued: "›", new_commits: "›", failed: "!", stopped: "!", not_reviewed: "○", draft_pr: "○", posted: "✓", skipped: "–" };
+let data = null, view = (() => { try { return localStorage.getItem("view"); } catch { return null; } })() || "all", openKey = null, lastLanes = "";
+const openGroups = new Set((() => { try { return JSON.parse(localStorage.getItem("openGroups") || "[]"); } catch { return []; } })());
+document.addEventListener("toggle", e => {
+  const id = e.target.dataset && e.target.dataset.group;
+  if (!id) return;
+  e.target.open ? openGroups.add(id) : openGroups.delete(id);
+  try { localStorage.setItem("openGroups", JSON.stringify([...openGroups])); } catch {}
+}, true);
+
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+/* browser storage can be blocked, the desk works without it */
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+async function copyText(text, el) {
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch { if (el) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } return false; }
+}
+
+
+/* the header stays on top; its height keeps sticky panes and jump targets clear of it */
+const topBar = document.querySelector(".top");
+const setHeadH = () => document.documentElement.style.setProperty("--head-h", `${topBar.offsetHeight}px`);
+new ResizeObserver(setHeadH).observe(topBar);
+setHeadH();
+addEventListener("scroll", () => topBar.classList.toggle("stuck", scrollY > 4), { passive: true });
+
+/* the glance strip jumps to the group it counts */
+let lastGlance = "";
+function setGlance(html) { if (html !== lastGlance) { document.querySelector("#glance").innerHTML = html; lastGlance = html; } }
+function tile(t) {
+  if (!t.n) t = { ...t, jump: null };
+  const tag = t.jump ? "button" : "div";
+  const v = t.value ?? t.n;
+  return `<${tag} class="tile"${t.jump ? ` data-jump="${esc(t.jump)}" type="button"` : ""}${t.hot && t.n ? " data-hot" : ""} style="--t:${t.color}">
+    <span class="k"><i aria-hidden="true">${t.mark}</i>${esc(t.label)}</span>
+    <span class="v${t.n ? "" : " zero"}">${esc(v)}</span>
+    <span class="s">${esc(t.sub || "")}</span></${tag}>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-jump]");
+  if (!b) return;
+  const target = b.dataset.jump.split(",").map(id => document.querySelector(`[data-gid="${CSS.escape(id)}"]:not([hidden] *)`)).find(Boolean);
+  if (!target) return;
+  if (target.tagName === "DETAILS") target.open = true;
+  target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  target.classList.remove("flash"); void target.offsetWidth; target.classList.add("flash");
+});
+
+async function api(path, body) {
+  const opt = { headers: { "X-Token": TOKEN } };
+  if (body) Object.assign(opt, { method: "POST", body: JSON.stringify(body), headers: { "X-Token": TOKEN, "Content-Type": "application/json" } });
+  const r = await fetch(path, opt);
+  const j = await r.json().catch(() => ({ ok: false, message: "No response from the dashboard server" }));
+  if (!r.ok && j.ok === undefined) j.ok = false;
+  return j;
+}
+
+function ago(value) {
+  if (!value) return "";
+  const t = typeof value === "number" ? value * 1000 : new Date(String(value).includes("T") ? value : value.replace(" ", "T")).getTime();
+  const m = Math.round((Date.now() - t) / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} h ago`;
+  return `${Math.round(h / 24)} d ago`;
+}
+
+/* live progress of a running review: the current step, and how long since the last one */
+const mins = s => s < 60 ? `${s} s` : `${Math.round(s / 60)} min`;
+function progressLine(p) {
+  if (!p) return "Starting…";
+  if (p.state === "stopped") return "Stopped without finishing";
+  return `${p.current || "Working"} · ${p.idle_s < 30 ? "now" : `${mins(p.idle_s)} ago`}`;
+}
+function progressBox(p) {
+  if (!p) return "";
+  const head = p.state === "running"
+    ? `Working for ${mins(p.elapsed_s)}. ${p.idle_s > 600 ? `No new step for ${mins(p.idle_s)}. It may be running a long command like the full test suite.` : `Last step ${p.idle_s < 30 ? "just now" : mins(p.idle_s) + " ago"}.`}`
+    : p.state === "stopped" ? "The run stopped before it finished." : p.state === "timed_out" ? "The run hit its time limit." : `The last run took ${mins(p.elapsed_s)}.`;
+  const steps = p.steps.slice().reverse().map(s => `<li${s.helper ? ' class="helper"' : ""}><time>${esc(new Date(s.at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }))}</time><span>${esc(s.text)}</span></li>`).join("");
+  return `<p class="live-head${p.state === "running" ? " on" : ""}">${esc(head)}</p><ol class="live-steps">${steps}</ol>${p.count > p.steps.length ? `<p class="hint" style="margin:6px 0 0;color:var(--ink-3);font-size:12.5px">${p.count} steps so far, the latest are shown.</p>` : ""}`;
+}
+
+function verdictText(r) {
+  if (r.verdict === "REQUEST_CHANGES") return `Changes requested, ${r.blocking || 0} blocking`;
+  if (r.verdict === "APPROVE") return "Approve, no comments";
+  if (r.verdict === "COMMENT") return "Comment only";
+  return "";
+}
+
+function sideFor(r) {
+  const btn = (label, act, cls = "btn") => `<button class="${cls}" data-act="${act}" data-key="${esc(r.key)}">${label}</button>`;
+  const stat = r.additions != null ? `<span class="diffstat"><span class="a">+${r.additions}</span> <span class="d">−${r.deletions}</span></span>` : "";
+  switch (r.state) {
+    case "ready": return `<span class="r-verdict">${esc(verdictText(r))}${r.checks_ok === false ? ", checks failed" : ""}</span>` + btn("Open", "open", "btn primary");
+    case "reviewing": return `<span class="r-verdict live${r.progress && r.progress.idle_s > 600 ? " quiet" : ""}">${esc(r.progress ? progressLine(r.progress) : `Working, started ${ago(r.state_updated)}`)}</span>`;
+    case "queued": case "new_commits": return stat + btn("Review now", "review");
+    case "failed": case "stopped": return `<span class="r-verdict">${r.state === "stopped" ? "Stopped" : "Failed"}</span>` + btn("Run again", "review");
+    case "not_reviewed": case "draft_pr": return stat + btn("Review now", "review");
+    case "posted": return r.review_url ? `<a class="btn quiet" href="${esc(r.review_url)}" target="_blank" rel="noopener">View on GitHub</a>` : `<span class="r-verdict">Posted</span>`;
+    case "skipped": return `<span class="r-verdict">Skipped</span>`;
+  }
+  return "";
+}
+
+function metaFor(r) {
+  const bits = [`${r.repo} #${r.number}`];
+  if (r.author) bits[0] += ` by ${r.author}`;
+  if (r.state === "new_commits") bits.push("new commits since the last draft");
+  else if (r.state === "draft_pr") bits.push("draft PR");
+  else if (r.updated) bits.push(`updated ${ago(r.updated)}`);
+  if (r.override) bits.push(`runs at ${r.override.effort || "default"} effort${r.override.model ? ` on ${r.override.model}` : ""}`);
+  return bits.join(", ");
+}
+
+function rowHtml(r) {
+  const checks = r.state === "ready" && r.checks_ok === false ? "bad" : "ok";
+  return `<li class="row" data-state="${r.state}" data-verdict="${esc(r.verdict || "")}" data-checks="${checks}">
+    <span class="gutter" aria-hidden="true">${r.state === "ready" && r.verdict === "REQUEST_CHANGES" ? "−" : MARK[r.state] || "○"}</span>
+    <button class="open" data-act="open" data-key="${esc(r.key)}" aria-label="Open ${esc(r.repo)} #${r.number}">
+      <span class="r-title">${esc(r.title || `${r.repo} #${r.number}`)}</span>
+      <span class="r-meta">${esc(metaFor(r))}</span>
+    </button>
+    <span class="r-side">${sideFor(r)}</span>
+  </li>`;
+}
+
+function laneSummary(rows) {
+  const n = s => rows.filter(r => s.includes(r.state)).length;
+  const parts = [];
+  if (n(["ready"])) parts.push(`${n(["ready"])} ready to post`);
+  if (n(["reviewing"])) parts.push(`${n(["reviewing"])} reviewing`);
+  const open = n(["queued", "new_commits", "not_reviewed", "draft_pr"]);
+  if (open) parts.push(`${open} not reviewed`);
+  return parts.length ? parts.join(", ") : "Nothing waiting";
+}
+
+function waitingCount() {
+  return data ? data.orgs.reduce((sum, o) => sum + o.rows.filter(r => r.state === "ready").length, 0) : 0;
+}
+function render() {
+  if (!data) return;
+  const q = $("#filter").value.trim().toLowerCase();
+  const a = data.agent;
+  const line = $("#agentLine");
+  let mode = "idle", text;
+  if (!a.loaded) { mode = "down"; text = "The scheduler job isn't loaded. Run prr doctor in a terminal."; }
+  else if (a.paused) { mode = "paused"; text = "Agent paused. Nothing is reviewed automatically."; }
+  else if (a.checking) { mode = "checking"; text = "Agent is checking GitHub now."; }
+  else text = a.last_check ? `Agent on. Last check ${ago(a.last_check)}, it checks every ${a.interval_min} minutes.` : `Agent on. It checks every ${a.interval_min} minutes.`;
+  line.dataset.mode = mode;
+  $("#agentText").textContent = text;
+  // a narrow toolbar cuts the status line short; the full text shows on hover
+  $("#agentText").title = text;
+  $("#pauseBtn").textContent = a.paused ? "Resume agent" : "Pause agent";
+
+  const gh = data.github;
+  const notice = $("#ghNotice");
+  notice.hidden = !gh.error;
+  if (gh.error) notice.textContent = `Couldn't load review requests from GitHub, showing the last known list. ${gh.error}`;
+
+  const total = data.orgs.reduce((s, o) => s + o.rows.filter(r => r.state === "ready").length, 0);
+  if (view !== "all" && !data.orgs.some(o => o.org === view)) view = "all";
+  $("#switch").hidden = data.orgs.length < 2;
+  const tabs = [{ id: "all", label: data.orgs.length === 2 ? "Both" : "All", count: total }].concat(data.orgs.map(o => ({ id: o.org, label: o.label, count: o.rows.filter(r => r.state === "ready").length })));
+  $("#switch").innerHTML = tabs.map(t => `<button role="tab" aria-selected="${view === t.id}" data-view="${esc(t.id)}">${esc(t.label)}${t.count ? `<span class="count">${t.count} ready</span>` : ""}</button>`).join("");
+  $("#lanes").dataset.view = view;
+  renderGlance();
+  if (typeof renderFrame === "function") renderFrame();
+
+  // rebuilding the lanes on every poll would reset what's open and what has focus, so only rebuild on change
+  const sig = JSON.stringify([data.orgs, view, q, [...openGroups], Math.floor(Date.now() / 60000)]);
+  if (sig === lastLanes) return;
+  lastLanes = sig;
+  $("#lanes").innerHTML = data.orgs.map(o => {
+    const rows = o.rows.filter(r => !q || `${r.repo} ${r.title} ${r.author} ${r.number}`.toLowerCase().includes(q));
+    const groups = GROUPS.map(g => {
+      const items = rows.filter(r => g.states.includes(r.state)).sort((x, y) => String(y.updated || y.state_updated).localeCompare(String(x.updated || x.state_updated)));
+      if (!items.length) return "";
+      const inner = `${g.hint ? `<p class="hint">${esc(a.paused && g.id === "next" ? "The agent is paused, so these wait until you resume it or start them." : g.hint)}</p>` : ""}<ul>${items.map(rowHtml).join("")}</ul>`;
+      return g.collapsed
+        ? `<details class="group" data-gid="${g.id}" data-group="${esc(o.org)}:${g.id}"${openGroups.has(`${o.org}:${g.id}`) ? " open" : ""}><summary>${g.title} (${items.length})</summary>${inner}</details>`
+        : `<div class="group" data-gid="${g.id}"><h3>${g.title}</h3>${inner}</div>`;
+    }).join("");
+    const spent = o.spent_week ? `, $${o.spent_week.toFixed(2)} spent this week` : "";
+    return `<section class="lane" data-org="${esc(o.org)}" style="--lane:${laneVar(o.org)}"${view !== "all" && view !== o.org ? " hidden" : ""}>
+      <header class="lane-head"><h2>${esc(o.label)}</h2><p>${esc(laneSummary(o.rows) + spent)}</p></header>
+      ${groups || `<p class="empty">${q ? "No reviews match this filter." : `No review requests. New ones show up here within ${a.interval_min} minutes.`}</p>`}
+    </section>`;
+  }).join("");
+}
+
+function renderGlance() {
+  const orgs = data.orgs.filter(o => view === "all" || o.org === view);
+  const rows = orgs.flatMap(o => o.rows);
+  const n = states => rows.filter(r => states.includes(r.state)).length;
+  const ready = rows.filter(r => r.state === "ready");
+  const changes = ready.filter(r => r.verdict === "REQUEST_CHANGES").length;
+  const running = rows.find(r => r.state === "reviewing");
+  const queued = n(["queued", "new_commits"]), waiting = queued + n(["not_reviewed", "draft_pr"]);
+  const spent = orgs.reduce((sum, o) => sum + (o.spent_week || 0), 0), posted = n(["posted"]);
+  const jump = (label, to, cls = "") => `<button type="button" class="${cls}" data-jump="${esc(to)}">${label}</button>`;
+  const plural = (k, one, many) => `${k} ${k === 1 ? one : many}`;
+  const first = ready.length ? `${jump(`${plural(ready.length, "review is", "reviews are")} ready for you to post`, "ready", "you")}${changes ? `, ${changes} asking for changes` : ""}.`
+                             : "<strong>Nothing to post.</strong>";
+  const rest = [];
+  if (running) rest.push([`the agent is reviewing ${esc(running.repo)} #${running.number}`, "reviewing"]);
+  if (n(["failed", "stopped"])) rest.push([`${n(["failed", "stopped"])} failed`, "attention", "bad"]);
+  if (waiting) rest.push([`${waiting} ${waiting === 1 ? "isn't" : "aren't"} reviewed yet`, "next,backlog"]);
+  // each count is the whole phrase, so it is big enough to click; the first one starts the sentence
+  const said = rest.map(([text, to, cls, after = ""], i) => jump(i ? text : text[0].toUpperCase() + text.slice(1), to, cls) + after);
+  const tail = said.length ? ` ${said[0]}${said.length > 1 ? `, ${said.slice(1, -1).join(", ")}${said.length > 2 ? "," : ""} and ${said[said.length - 1]}` : ""}.` : "";
+  setGlance(`<p class="say">${first}${tail} <span class="spent">$${spent.toFixed(2)} spent this week, ${plural(posted, "review", "reviews")} posted.</span></p>`);
+}
+
+async function load() {
+  const s = await api("/api/state");
+  if (s.agent) { data = s; render(); }
+  // the open drawer of a running review gets its steps refreshed, nothing else is rebuilt
+  if (openKey && $("#progressBox")) {
+    const v = await api(`/api/draft?key=${encodeURIComponent(openKey)}`);
+    if (v.running) $("#progressBox").innerHTML = progressBox(v.progress) || `<p>Working, started ${esc(ago((v.state || {}).updated_at))}.</p>`;
+    else openDrawer(openKey, true);
+  }
+}
+
+async function loadActivity() {
+  const r = await api("/api/activity");
+  $("#activityList").innerHTML = (r.lines || []).map(l => {
+    const m = l.match(/^(\d{4}-\d\d-\d\d \d\d:\d\d) (.*)$/);
+    return m ? `<li><time>${esc(m[1].slice(5))}</time>${esc(m[2])}</li>` : `<li>${esc(l)}</li>`;
+  }).join("") || "<li>No activity yet.</li>";
+}
+
+let toastTimer;
+function toast(html) {
+  const t = $("#toast");
+  t.innerHTML = html;
+  t.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("on"), 5000);
+}
+
+/* markdown, escaped first, so nothing from a review can inject markup */
+function inline(s) {
+  return esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+}
+function md(src, codeHook) {
+  const lines = String(src || "").split("\n");
+  let html = "", i = 0;
+  while (i < lines.length) {
+    const fence = lines[i].match(/^\s*(`{3,})(\w*)\s*$/);
+    if (fence) {
+      const buf = []; i++;
+      while (i < lines.length && lines[i].trim() !== fence[1]) buf.push(lines[i++]);
+      i++;
+      html += (codeHook && codeHook(fence[2], buf)) || `<pre><code>${esc(buf.join("\n"))}</code></pre>`;
+      continue;
+    }
+    if (/^\s*([-*]|\d+\.)\s+/.test(lines[i])) {
+      html += "<ul>";
+      while (i < lines.length && /^\s*([-*]|\d+\.)\s+/.test(lines[i])) html += `<li>${inline(lines[i++].replace(/^\s*([-*]|\d+\.)\s+/, ""))}</li>`;
+      html += "</ul>";
+      continue;
+    }
+    if (/^#{1,6}\s/.test(lines[i])) { html += `<h4>${inline(lines[i++].replace(/^#+\s/, ""))}</h4>`; continue; }
+    if (!lines[i].trim()) { i++; continue; }
+    const para = [];
+    while (i < lines.length && lines[i].trim() && !/^\s*(`{3,}|[-*]\s|\d+\.\s|#{1,6}\s)/.test(lines[i])) para.push(lines[i++]);
+    html += `<p>${inline(para.join(" "))}</p>`;
+  }
+  return html;
+}
+function suggestionDiff(comment) {
+  return (lang, buf) => {
+    if (lang !== "suggestion") return null;
+    const old = comment.replaces == null ? [] : [].concat(comment.replaces);
+    const rows = old.map(l => `<div class="l del">${esc(l)}</div>`).join("") + buf.map(l => `<div class="l add">${esc(l)}</div>`).join("");
+    const cap = buf.length ? "Suggested change, the owner can commit it in one click" : "Suggested change: delete these lines";
+    return `<div class="diff"><div class="cap">${cap}</div>${rows}</div>`;
+  };
+}
+
+async function openDrawer(key, quiet) {
+  openKey = key;
+  if (!rs) await loadRunSettings();
+  const v = await api(`/api/draft?key=${encodeURIComponent(key)}`);
+  const row = data.orgs.flatMap(o => o.rows).find(r => r.key === key) || {};
+  const st = v.state || {};
+  const d = v.draft;
+  const drawer = $("#drawer");
+  drawer.style.setProperty("--lane", laneVar(row.org || st.org));
+  const title = row.title || st.title || key;
+  const url = row.url || st.url;
+  const verdictMark = { APPROVE: "+", REQUEST_CHANGES: "−", COMMENT: "~" };
+  const gVar = { APPROVE: "var(--approve)", REQUEST_CHANGES: "var(--changes)", COMMENT: "var(--accent)" };
+  let body = "";
+
+  if (d) {
+    // only needed changes are posted, minor points stay in the run summary
+    const blocking = d.comments.filter(c => c.blocking).length, held = st.minor || 0;
+    const vText = d.event === "REQUEST_CHANGES" ? `Request changes, ${blocking} blocking`
+      : d.event === "APPROVE" ? "Approve, no comments" : "Comment";
+    const heldLine = held ? `<p class="next-run">${held} minor ${held === 1 ? "point" : "points"} not posted. ${held === 1 ? "It's" : "They're"} under How it was checked, for you only.</p>` : "";
+    body += `<section><div class="verdict-line" style="--g:${gVar[d.event] || "var(--ink)"}"><span class="mark">${verdictMark[d.event] || "~"}</span>${esc(vText)}</div>${heldLine}</section>`;
+    body += `<section><h3>Review summary</h3><div class="prose">${d.body ? md(d.body) : "<p>Empty. The approval goes out on its own.</p>"}</div></section>`;
+    if (d.comments.length) {
+      body += `<section><h3>Inline comments</h3>` + d.comments.map(c => `<article class="comment">
+        <header><code>${esc(c.path)}:${c.start_line ? `${c.start_line}-` : ""}${c.line}</code><span class="tag ${c.blocking ? "blocking" : "minor"}">${c.blocking ? "Blocking" : "Minor"}</span></header>
+        <div class="prose">${md(c.body, suggestionDiff(c))}</div></article>`).join("") + `</section>`;
+    }
+    const rt = d.resolve_threads || [];
+    if (rt.length) {
+      body += `<section><h3>Conversations it resolves (${rt.length})</h3><p class="next-run" style="margin:0 0 10px">Your earlier comments the new commits fixed. They're resolved right after the review is posted, not before.</p>`
+        + rt.map(t => `<article class="comment"><header><code>${esc(t.path)}:${esc(t.line)}</code><span class="tag minor">Fixed</span></header>
+          <div class="prose">${t.comment ? `<p>${inline(t.comment)}</p>` : ""}${(t.evidence || []).map(e => `<p class="next-run" style="margin:0 0 6px">${inline(e)}</p>`).join("")}</div></article>`).join("")
+        + `</section>`;
+    }
+    const issues = st.check_issues || [];
+    body += `<section><h3>Posting checks</h3><p class="checks ${st.checks_ok === false ? "bad" : "ok"}">${st.checks_ok === false ? "These must be fixed before it can be posted:" : d.comments.length ? "Passed. Every comment sits on a changed line and every suggestion replaces the right code." : "Passed. Only the approval goes out."}</p>${issues.length ? `<ul>${issues.map(i => `<li>${esc(i)}</li>`).join("")}</ul>` : ""}</section>`;
+  } else if (v.running) {
+    body += `<section><h3>What it's doing now</h3><div id="progressBox">${progressBox(v.progress) || `<p>Working, started ${esc(ago(st.updated_at))}.</p>`}</div><p class="next-run">The draft shows up here when it's done.</p></section>`;
+  } else if (st.status === "failed" || st.status === "running") {
+    body += `<section><h3>The last review didn't finish</h3><div class="error-box">${esc(st.error || "It stopped before writing a draft.")}</div></section>`;
+  } else {
+    body += `<section><p>No review yet. Start one and the agent drafts it in the background, usually within 10 to 30 minutes. Nothing is posted until you post it here.</p></section>`;
+  }
+  if (st.summary) body += `<section><details><summary><strong>How it was checked</strong></summary><div class="prose" style="margin-top:10px">${md(st.summary)}</div></details></section>`;
+  if (v.resume) body += `<section><h3>Talk it through</h3><p class="hint" style="margin:0 0 8px;color:var(--ink-2);font-size:13px">Opens the same Claude session that wrote this review, with all its context.</p><div class="resume"><code id="resumeCmd">${esc(v.resume)}</code><button class="btn" data-act="copy">Copy</button></div></section>`;
+  if (st.cost_usd) body += `<section><p style="margin:0;color:var(--ink-2);font-size:13px">This review cost $${Number(st.cost_usd).toFixed(2)}${st.run_model ? ` on ${esc(st.run_model)}${st.run_effort ? ` at ${esc(st.run_effort)} effort` : ""}` : ""}.</p></section>`;
+  body += `<section><h3>Model and effort for this PR</h3>${pickerHtml(v.override || {}, "job", key)}<p class="next-run">${v.running ? "A change here reaches the running review within seconds, from its next step. " : ""}Its next review runs on ${esc(v.next_run)}. Automatic reviews use this too.</p></section>`;
+
+  const canPost = d && st.status === "drafted" && row.state === "ready" && st.checks_ok !== false;
+  const foot = [
+    canPost ? `<button class="btn primary" data-act="post" data-key="${esc(key)}" data-resolves="${(d.resolve_threads || []).length}">Post review</button>` : "",
+    !v.running && row.state !== "posted" ? `<button class="btn" data-act="review" data-key="${esc(key)}">${d || st.status === "failed" ? "Run again" : "Review now"}</button>` : "",
+    d && st.status === "drafted" ? `<button class="btn" data-act="skip" data-key="${esc(key)}">Skip until new commits</button>` : "",
+    `<span class="spacer"></span>`,
+    url ? `<a class="btn quiet" href="${esc(url)}" target="_blank" rel="noopener">Open on GitHub</a>` : "",
+  ].join("");
+
+  drawer.innerHTML = `<header class="d-head">
+      <p class="where">${esc((data.orgs.find(o => o.org === (row.org || st.org)) || {}).label || "")}, ${esc(row.repo || st.repo)} #${esc(row.number || st.number)}</p>
+      <h2 id="dTitle">${esc(title)}</h2>
+      <p class="by">${esc(row.author || st.author ? `by ${row.author || st.author}` : "")}</p>
+      <button class="btn quiet d-close" data-act="close" aria-label="Close">Close</button>
+    </header>
+    <div class="d-body">${body}</div>
+    <footer class="d-foot">${foot}</footer>`;
+  drawer.classList.add("on");
+  drawer.setAttribute("aria-hidden", "false");
+  $("#scrim").classList.add("on");
+  if (!quiet) ($(".d-foot .btn", drawer) || $(".d-close", drawer)).focus();
+}
+
+let lastFocus = null;
+function closeDrawer() {
+  openKey = null;
+  $("#drawer").classList.remove("on");
+  $("#drawer").setAttribute("aria-hidden", "true");
+  $("#scrim").classList.remove("on");
+  if (lastFocus) lastFocus.focus();
+}
+
+let confirmTimer;
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-act], [data-view]");
+  if (!b) return;
+  if (b.dataset.view && !b.dataset.act) { view = b.dataset.view; store.set("view", view); render(); return; }
+  const act = b.dataset.act, key = b.dataset.key;
+  if (act === "open") { lastFocus = b; return openDrawer(key); }
+  if (act === "close") return closeDrawer();
+  if (act === "copy") return toast(await copyText($("#resumeCmd").textContent, $("#resumeCmd")) ? "Command copied" : "Copy didn't work here. The command is selected, press Cmd+C.");
+  if (act === "post") {
+    if (!b.classList.contains("confirm")) {
+      b.classList.add("confirm");
+      const n = parseInt(b.dataset.resolves) || 0;
+      b.textContent = n ? `Confirm: post and resolve ${n} ${n === 1 ? "conversation" : "conversations"}` : "Confirm: post as you on GitHub";
+      clearTimeout(confirmTimer);
+      confirmTimer = setTimeout(() => { b.classList.remove("confirm"); b.textContent = "Post review"; }, 5000);
+      return;
+    }
+    b.disabled = true; b.textContent = "Posting…";
+    const r = await api("/api/post", { key });
+    const link = (r.message || "").match(/https?:\/\/\S+/);
+    const resolved = ((r.message || "").match(/^resolved /gm) || []).length;
+    const unresolved = ((r.message || "").match(/^warning: couldn't resolve/gm) || []).length;
+    toast(r.ok ? `Review posted${resolved ? `, ${resolved} ${resolved === 1 ? "conversation" : "conversations"} resolved` : ""}.${unresolved ? ` ${unresolved} couldn't be resolved, see the PR.` : ""}${link ? ` <a href="${esc(link[0])}" target="_blank" rel="noopener">View it on GitHub</a>` : ""}` : `Not posted. ${esc((r.message || "").split("\n").filter(l => l.startsWith("ERROR")).join(" ") || r.message)}`);
+    await load();
+    if (r.ok) closeDrawer(); else openDrawer(key);
+    return;
+  }
+  if (act === "review") {
+    b.disabled = true;
+    const r = await api("/api/review", { key });
+    toast(r.ok ? "Review started. It shows under Reviewing now." : `Couldn't start the review: ${esc(r.message)}`);
+    setTimeout(load, 1500);
+    if (openKey) closeDrawer();
+    return;
+  }
+  if (act === "skip") {
+    const r = await api("/api/skip", { key });
+    toast(r.ok ? "Skipped until the PR gets new commits." : esc(r.message));
+    await load(); closeDrawer();
+  }
+});
+
+$("#checkNow").addEventListener("click", async e => {
+  e.target.disabled = true;
+  const r = await api("/api/agent", { action: "check" });
+  toast(r.ok ? "Checking GitHub for new review requests." : `Couldn't start a check: ${esc(r.message)}`);
+  setTimeout(async () => { await api("/api/refresh", {}); await load(); e.target.disabled = false; }, 2500);
+});
+$("#pauseBtn").addEventListener("click", async () => {
+  const paused = data && data.agent.paused;
+  const r = await api("/api/agent", { action: paused ? "resume" : "pause" });
+  toast(r.ok ? (paused ? "Agent resumed." : "Agent paused.") : esc(r.message));
+  load();
+});
+$("#filter").addEventListener("input", render);
+$("#scrim").addEventListener("click", closeDrawer);
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && openKey) closeDrawer();
+  if (e.key === "/" && document.activeElement !== $("#filter")) { e.preventDefault(); $("#filter").focus(); }
+});
+$("#activity").addEventListener("toggle", e => { if (e.target.open) loadActivity(); });
+
+
+/* model and effort */
+let rs = null;
+async function loadRunSettings() { rs = await api("/api/run-settings"); return rs; }
+function pickerHtml(cur, scope, key) {
+  if (!rs) return "";
+  const u = rs.user_default || {};
+  const d = scope === "job" ? (rs.defaults.review || {}) : {};
+  const defModel = scope === "job" && d.model ? (rs.models.find(m => m.id === d.model) || {}).label : u.model;
+  const defEffort = scope === "job" && d.effort ? d.effort : u.effort;
+  const mOpts = [`<option value="">Default (${esc(defModel || "your default")})</option>`]
+    .concat(rs.models.map(m => `<option value="${esc(m.id)}"${cur.model === m.id ? " selected" : ""}>${esc(m.label)}</option>`));
+  const eOpts = [`<option value="">Default (${esc(defEffort || "your default")})</option>`]
+    .concat(rs.efforts.map(e => `<option value="${e}"${cur.effort === e ? " selected" : ""}>${e}</option>`));
+  return `<div class="picker" data-scope="${scope}" data-key="${esc(key || "")}">
+    <label>Model <select data-pick="model">${mOpts.join("")}</select></label>
+    <label>Effort <select data-pick="effort">${eOpts.join("")}</select></label></div>`;
+}
+function readPicker(el) {
+  return { model: el.querySelector('[data-pick="model"]').value || null, effort: el.querySelector('[data-pick="effort"]').value || null };
+}
+async function openSettings() {
+  await loadRunSettings();
+  const m = $("#settingsModal");
+  const allowed = rs.models.map(x => esc(x.label)).join(", ");
+  m.innerHTML = `<h2 id="settingsTitle">Run settings</h2>
+    <p>The model and effort the agent uses. A PR's own choice in its drawer wins over this default.</p>
+    <div class="job"><h3>Reviews</h3>${pickerHtml(rs.defaults.review || {}, "default")}</div>
+    <div class="models">Your gateway allows ${allowed || "no tested models yet"}${rs.checked_at ? `, last checked ${esc(ago(rs.checked_at))}` : ""}.
+      ${rs.checking ? "Checking now…" : `<button class="link" data-act="probe">Check which models work</button>`}</div>
+    <footer><button class="btn" data-act="close-settings">Cancel</button><button class="btn primary" data-act="save-settings">Save</button></footer>`;
+  $("#settingsScrim").hidden = false; m.hidden = false;
+  m.querySelector("select").focus();
+}
+function closeSettings() { $("#settingsScrim").hidden = true; $("#settingsModal").hidden = true; $("#settingsBtn").focus(); }
+document.addEventListener("change", async e => {
+  const sel = e.target.closest("[data-pick]");
+  if (!sel) return;
+  const picker = sel.closest(".picker");
+  if (picker.dataset.scope !== "job") return;
+  const r = await api("/api/job-settings", { key: picker.dataset.key, ...readPicker(picker) });
+  toast(esc(r.message || "Saved."));
+  load();
+  if (openKey) { await openDrawer(openKey, true); $(".d-body .picker select[data-pick=\"" + sel.dataset.pick + "\"]")?.focus(); }
+});
+document.addEventListener("click", async e => {
+  const b = e.target.closest('[data-act="save-settings"], [data-act="close-settings"], [data-act="probe"]');
+  if (!b) return;
+  if (b.dataset.act === "close-settings") return closeSettings();
+  if (b.dataset.act === "probe") { const r = await api("/api/models/check", {}); toast(esc(r.message)); setTimeout(openSettings, 400); return; }
+  const r = await api("/api/run-settings", { job: "review", ...readPicker($("#settingsModal .picker")) });
+  toast(esc(r.message || "Saved."));
+  closeSettings();
+});
+$("#settingsBtn").addEventListener("click", openSettings);
+$("#settingsScrim").addEventListener("click", closeSettings);
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#settingsModal").hidden) closeSettings(); });
+loadRunSettings();
+
+load();
+setInterval(() => { load(); if ($("#activity").open) loadActivity(); }, 5000);
+/* the frame: the switch between desks and the footer's version, from /api/frame. Each desk's count is what waits for you. */
+async function loadFrame() {
+  const f = await api("/api/frame").catch(() => null);
+  if (!f || !f.desks) return;
+  window.__frame = f;
+  renderFrame();
+  if (f.version) document.querySelector("#footVersion").textContent = `Legwork ${f.version}`;
+}
+function renderFrame() {
+  const f = window.__frame;
+  if (!f) return;
+  const mine = typeof waitingCount === "function" ? waitingCount() : null;
+  document.querySelector("#deskNav").innerHTML = f.desks.map(d => {
+    const n = d.me && mine ? `<span class="n" aria-label="${mine} waiting for you">${mine}</span>` : "";
+    if (d.me) return `<span aria-current="page">${esc(d.label)}${n}</span>`;
+    return d.url ? `<a href="${esc(d.url)}">${esc(d.label)}</a>` : `<span class="off" title="This desk isn't running. Start it with ${d.id === "ticket-agent" ? "ptk" : "prr"} dashboard">${esc(d.label)}</span>`;
+  }).join("");
+}
+document.querySelector("#footHelp").innerHTML = "<kbd>Esc</kbd> closes what's open";
+loadFrame();
+setInterval(loadFrame, 30000);
+
+</script>
+</body>
+</html>

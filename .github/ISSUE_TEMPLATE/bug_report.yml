@@ -1,0 +1,53 @@
+name: Bug report
+description: Something in legwork doesn't work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Before you paste anything, remove tokens, private repo names, people's names and
+        anything else you wouldn't post in public. A security problem goes to SECURITY.md instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ptk check WEB-12
+        2. ...
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part
+      options:
+        - Review desk / prr
+        - Ticket desk / ptk
+        - Setup (PROMPT.md, install.py)
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Legwork version
+      description: "`version` in kit.json, or the desk's footer."
+      placeholder: "2.0.0"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS and Python
+      placeholder: "macOS 15.5, Python 3.12"
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Doctor output
+      description: The output of `prr doctor` or `ptk doctor`, with anything private removed.
+      render: text

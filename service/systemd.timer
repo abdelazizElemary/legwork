@@ -1,0 +1,10 @@
+[Unit]
+Description=Run {{LABEL}} every {{INTERVAL_MIN}} minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec={{INTERVAL_MIN}}min
+Unit={{LABEL}}.service
+
+[Install]
+WantedBy=timers.target

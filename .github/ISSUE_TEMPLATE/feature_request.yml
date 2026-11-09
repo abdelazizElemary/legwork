@@ -1,0 +1,21 @@
+name: Feature request
+description: An idea that would make legwork more useful
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you're trying to do
+      description: The task or the moment where legwork gets in your way or falls short.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+      description: How you'd like it to work. Rough is fine.
+  - type: textarea
+    id: safety
+    attributes:
+      label: Anything it would write
+      description: If the idea pushes, posts or writes to GitHub or a tracker, say when and with whose OK. Every new way to write needs a guard and a test first.

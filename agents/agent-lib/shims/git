@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+# guarded git for the unattended agents: no push, and the user's own checkouts stay untouched
+import json
+import os
+import sys
+
+GUARD = json.load(open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "guard.json")))
+REAL = GUARD["real_git"]
+# the workspaces to protect. Tool caches (uv, npm) and the agents' worktrees under <workspace>/.local are fine
+PROTECTED = [os.path.realpath(os.path.expanduser(p)) for p in GUARD["protected"]]
+# set only under attribution.mode disclose: every commit a run makes carries it
+TRAILER = GUARD.get("commit_trailer")
+MUTATING = {"checkout", "switch", "reset", "restore", "stash", "pull", "clean", "rebase", "merge", "commit",
+            "cherry-pick", "am", "revert", "rm", "mv", "add", "apply", "tag", "branch", "update-ref", "gc", "prune"}
+args = sys.argv[1:]
+
+
+def block(why):
+    sys.stderr.write(f"blocked by the agent's git guard: {why}\n")
+    sys.exit(1)
+
+
+def under(path, root):
+    return path == root or path.startswith(root + os.sep)
+
+
+def in_local(path):
+    return any(under(path, os.path.join(p, ".local")) for p in PROTECTED)
+
+
+cwd, i = os.getcwd(), 0
+git_dir, work_tree = os.environ.get("GIT_DIR"), os.environ.get("GIT_WORK_TREE")
+while i < len(args):
+    a = args[i]
+    if a == "-C" and i + 1 < len(args):
+        cwd = os.path.join(cwd, args[i + 1]); i += 2; continue
+    if a == "-c" and i + 1 < len(args):
+        i += 2; continue
+    if a in ("--git-dir", "--work-tree") and i + 1 < len(args):
+        if a == "--git-dir":
+            git_dir = os.path.join(cwd, args[i + 1])
+        else:
+            work_tree = os.path.join(cwd, args[i + 1])
+        i += 2; continue
+    if a.startswith("--git-dir="):
+        git_dir = os.path.join(cwd, a.split("=", 1)[1])
+    elif a.startswith("--work-tree="):
+        work_tree = os.path.join(cwd, a.split("=", 1)[1])
+    if a.startswith("-"):
+        i += 1; continue
+    break
+sub = args[i] if i < len(args) else ""
+rest = args[i + 1:]
+real = os.path.realpath(cwd)
+# --git-dir, --work-tree and GIT_DIR / GIT_WORK_TREE point git somewhere else than the working directory
+targets = [real] + [os.path.realpath(os.path.join(real, t)) for t in (work_tree, git_dir) if t]
+
+if sub == "push":
+    block("git push")
+if sub == "worktree" and rest[:1] == ["add"]:
+    # new worktrees only under <workspace>/.local, never inside a checkout
+    targets, j = [], 1
+    while j < len(rest):
+        if rest[j] in ("-b", "-B", "--reason"):
+            j += 2; continue
+        if not rest[j].startswith("-"):
+            targets.append(rest[j])
+        j += 1
+    target = os.path.realpath(os.path.join(real, targets[0])) if targets else ""
+    if target and not in_local(target):
+        block(f"worktrees go under <workspace>/.local/wt, not {target}")
+listing_branches = sub == "branch" and set(rest) <= {"--show-current", "-a", "-r", "--list", "-v", "-vv"}
+changes_remote = sub == "remote" and rest[:1] and rest[0] in {"add", "remove", "rm", "rename", "set-url", "set-head", "set-branches", "prune"}
+changes_config = sub == "config" and not set(rest) & {"--get", "--get-all", "--get-regexp", "--list", "-l", "--show-origin", "--show-scope"}
+for target in targets:
+    if (sub in MUTATING and not listing_branches or changes_remote or changes_config) \
+            and any(under(target, p) for p in PROTECTED) and not in_local(target):
+        block(f"git {sub} in your checkout ({target})")
+if sub == "commit" and TRAILER:
+    args = [*args[:i + 1], "--trailer", TRAILER, *rest]
+os.execv(REAL, [REAL, *args])

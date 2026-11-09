@@ -1,0 +1,11 @@
+# Every change is reviewed by the maintainer. The paths below are the safety-critical ones: read them twice.
+* @abdelazizElemary
+
+# what keeps unattended runs from pushing, posting or touching someone's checkout
+/agents/agent-lib/shims/            @abdelazizElemary
+/skills/pr-review/scripts/post_review.py @abdelazizElemary
+# what reaches GitHub from the ticket agent, and the rules every install writes
+/agents/ticket-agent/agent.py       @abdelazizElemary
+/install.py                         @abdelazizElemary
+/rules/                             @abdelazizElemary
+/.github/                           @abdelazizElemary

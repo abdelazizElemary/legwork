@@ -1,0 +1,46 @@
+name: kit checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# the tests only read the repo: no write token, and no credentials left in the checkout
+permissions:
+  contents: read
+
+concurrency:
+  group: kit-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: tests (${{ matrix.os }}, python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 3.9 has no build for the newest Ubuntu image, so it stays on 24.04 while the kit supports it
+          - { os: ubuntu-24.04, python: "3.9" }
+          - { os: ubuntu-latest, python: "3.12" }
+          - { os: macos-latest, python: "3.12" }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: install the test runner
+        run: python -m pip install --disable-pip-version-check -r tests/requirements.txt
+      - name: run the tests
+        env:
+          # on a PR: changes to installed files need a version bump (tests/test_hygiene.py)
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          # optional repo secret: comma-separated words that must never ship (a name, an alias, a work email)
+          KIT_PRIVATE_TERMS: ${{ secrets.KIT_PRIVATE_TERMS }}
+        run: python -m pytest -q tests

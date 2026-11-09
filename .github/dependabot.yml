@@ -1,0 +1,15 @@
+# keeps the pinned actions current: a PR when a new release is out, which CI then checks
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
+    directory: /tests
+    schedule:
+      interval: monthly
+    ignore:
+      # pytest 9 needs python 3.10+, the kit supports 3.9: only 8.x fixes until 3.9 is dropped
+      - dependency-name: pytest
+        update-types: ["version-update:semver-major"]

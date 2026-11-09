@@ -1,0 +1,530 @@
+{
+ "name": "legwork",
+ "version": "2.0.0",
+ "created": "2026-10-13",
+ "entry_point": "README.md for people, PROMPT.md (which points to IMPLEMENT.md) for Claude",
+ "summary": "Keeps track of your daily assigned tasks and the PRs waiting for your review, and does the legwork with Claude Code. Two unattended agents with local desks: a PR review agent that drafts reviews in your voice and never posts by itself, and a ticket agent that checks your assigned tickets (GitHub Issues, GitHub Projects or Jira), asks for missing context, and after your approval implements them as draft PRs per repo.",
+ "requirements": {
+  "os": "macOS (launchd) or Linux (systemd --user or cron)",
+  "python": ">= 3.9, standard library only (Playwright in a venv only for Jira browser sign-in)",
+  "cli": [
+   "claude (signed in, headless -p works)",
+   "gh (signed in to the GitHub host)",
+   "git with SSH access",
+   "jq"
+  ],
+  "per_repo": "whatever the repos need to build and test (node/npm, uv, ...), on run_path",
+  "claude_plugins": {
+   "recommended": [
+    "pr-review-toolkit@claude-plugins-official"
+   ],
+   "fallback": [
+    "feature-dev@claude-plugins-official"
+   ],
+   "optional": [
+    "vercel (react-best-practices checklist)"
+   ]
+  }
+ },
+ "components": [
+  {
+   "id": "pr-review",
+   "command": "prr",
+   "dashboard": "Review desk, http://127.0.0.1:8787 (token in the URL)",
+   "skill": "pr-review",
+   "schedule": "every interval_minutes: poll review requests, draft reviews for new ones",
+   "commands": [
+    "cycle",
+    "list",
+    "show <pr>",
+    "post <pr>",
+    "skip <pr>",
+    "review <pr> [--model M --effort E]",
+    "baseline",
+    "pause",
+    "resume",
+    "clean",
+    "doctor",
+    "dashboard [stop|--no-open]",
+    "settings [--model M] [--effort E]",
+    "models"
+   ]
+  },
+  {
+   "id": "ticket",
+   "command": "ptk",
+   "dashboard": "Ticket desk, http://127.0.0.1:8788 (token in the URL)",
+   "skill": "ticket-work",
+   "schedule": "every interval_minutes: poll assigned tickets, check new ones, start approved implementations",
+   "commands": [
+    "cycle",
+    "list",
+    "show <KEY>",
+    "check <KEY>",
+    "context <KEY> \"text\" [--implement]",
+    "approve <KEY> [\"notes\"]",
+    "finalize <KEY> [--dry-run]",
+    "skip <KEY>",
+    "unskip <KEY>",
+    "login (Jira browser auth only)",
+    "pause",
+    "resume",
+    "doctor",
+    "dashboard [stop|--no-open]",
+    "settings [check|implement|diagnose] [--model M] [--effort E]",
+    "models",
+    "fix <KEY> [\"instructions\"] [--fresh | --pr-step]",
+    "rework <KEY> [\"instructions\"]"
+   ]
+  }
+ ],
+ "policies": {
+  "authorship": "The user is the only author of commits, PRs, reviews and comments. No Co-Authored-By trailer, no 'Generated with' line, no mention of Claude, AI or an agent.",
+  "branches": "Ticket work always starts new branches from the latest default branch. A rework the user asks for only adds commits (never force-pushed) to the branch the ticket agent created for that ticket's own open PR.",
+  "checkouts": "Never checkout, pull, reset, restore or stash in the user's checkouts. All work in worktrees under <workspace>/.local/wt. Spawned agents are read-only unless edits were asked for.",
+  "no_assumptions": "Every claim, fix and review comment is backed by path:line or a command that was run. Unproven points are questions or are left out.",
+  "voice": "Each person's own voice, learned at setup from their own writing and kept in profile/voice.md. The kit only enforces the attribution setting, real path:line evidence and the person's own style switches.",
+  "review_verdict": "REQUEST_CHANGES only for a proven blocking issue, with the blocking comments. How an approve looks and whether minor points are posted follow each person's review.policy.",
+  "review_blocking": [
+   "new build, typecheck or test failures vs base (or once merged with the latest base)",
+   "crash on a normal path",
+   "wrong result or regression in the main flow",
+   "data loss, broken migration, schema/client mismatch",
+   "security: authz bypass, missing tenant/ownership filter, injection, traversal, SSRF, secrets",
+   "contract change without the consumer change",
+   "a project rule enforced by tests or CI",
+   "untested critical backend code (business decisions, auth, data writes, migrations, a bug fix without a failing-on-base test), proven with coverage",
+   "a clear violation of the repo's own proven architecture (two path:line examples of the house pattern)"
+  ],
+  "review_posting": "The agent drafts and notifies, never posts. The user posts from the desk or with prr post, after post_review.py re-checks the draft against the PR.",
+  "review_backlog": "The first cycle marks pending requests as seen; only new requests or new commits get reviewed automatically.",
+  "requested_changes_format": "GitHub suggestion blocks the owner can commit, checked against the real lines ('replaces').",
+  "tickets_tracker": "Read-only. No comments, edits, labels or transitions.",
+  "tickets_flow": "Auto-check every open assigned ticket (configurable); the user validates or adds context on the desk; implement only after approval; one implementation at a time.",
+  "tickets_prs": "Draft PRs, one per repo, from the latest default branch, ticket key in branch/commits/title, pushed only after the agent's deterministic checks pass, cross-linked with merge order.",
+  "budgets": "Every headless run has --max-budget-usd and a timeout.",
+  "review_rereview": "On a re-review, resolve the user's own open conversations that the new commits fixed, at post time and with path:line proof. Partly fixed, pushed back on, or others' threads stay open."
+ },
+ "placeholders": {
+  "AUTHOR_NAME": "author.name",
+  "AUTHOR_FIRST": "author.first_name or the first word of author.name",
+  "AUTHOR_EMAIL": "author.email",
+  "GH_HOST": "github_host",
+  "WORKSPACE_LIST": "projects[].workspace",
+  "ORG_LIST": "projects[].org",
+  "COMMIT_RULE": "commit_rule",
+  "TRACKER_DESC": "derived from ticket.tracker",
+  "PROJECT_LABEL / WORKSPACE / ORG": "per project, in the seeded references/<id>.md"
+ },
+ "config_reference": {
+  "author.name, author.email": "Git identity the agents enforce on every commit (author and committer).",
+  "author.first_name": "Optional. How the skills refer to the user (default: first word of name).",
+  "github_host": "github.com or a GitHub Enterprise host.",
+  "components": "Any of pr-review, ticket.",
+  "projects[]": "One per GitHub org: id (kebab-case, names references/<id>.md), org, label (shown on the desks), workspace (folder holding that org's checkouts), memory_index (optional path to a project memory index the skills read).",
+  "commit_rule": "Optional extra commit rule for CLAUDE.md, e.g. 'Commit messages need a ticket id.'",
+  "binaries.python/claude/gh/git": "Empty to auto-detect from PATH.",
+  "run_path": "PATH for headless runs. Empty to build it from the binaries and common tools found.",
+  "scheduler": "launchd, systemd, cron or none. Empty to pick by OS.",
+  "service_prefix": "Scheduler label prefix, e.g. com.yourname. Empty for com.<user>.",
+  "shell_env": "Env var names the headless claude needs that only the shell rc sets (gateway URL and token). Read from a login shell when missing.",
+  "interval_minutes": "Poll interval for both agents.",
+  "notify": "Desktop notifications.",
+  "review.orgs": "Orgs the review agent watches (default: every project org).",
+  "review.max_reviews_per_cycle, max_budget_usd, review_timeout_minutes, max_attempts_per_commit": "Throughput, cost cap and retry limits.",
+  "review.skip_authors": "Logins never reviewed automatically.",
+  "review.default_effort": "Starting default effort for reviews (high).",
+  "review.dashboard_port": "Review desk port (8787).",
+  "ticket.project": "The project id whose workspace and org hold the code.",
+  "ticket.label": "Title on the ticket desk.",
+  "ticket.tracker.type": "github or jira.",
+  "ticket.tracker (github).host": "Defaults to github_host.",
+  "ticket.tracker (github).scope": "Search qualifiers limiting where issues come from, e.g. [\"org:acme\"] or [\"repo:acme/backlog\"]. Empty: every repo on the host.",
+  "ticket.tracker (github).query": "Extra search qualifiers, e.g. \"label:ready -label:blocked\".",
+  "ticket.tracker (github).project": "Optional Projects board: {owner, owner_type: organization|user, number, status_field: \"Status\", done: [\"Done\"], priority_field: \"Priority\", sprint_field: \"Sprint\"}. Needs gh's read:project scope.",
+  "ticket.tracker (github).key_prefixes": "{\"owner/repo\": \"PREFIX\"}. Default prefix: the repo name's last word in capitals.",
+  "ticket.tracker (github).type_labels": "Label to type map added to the defaults (bug -> Bug, enhancement -> Feature, epic -> Epic).",
+  "ticket.tracker.issue_line": "Line appended to every PR body. GitHub default 'Refs {ref}'. 'Closes {ref}' would close the issue on merge. Empty for none.",
+  "ticket.tracker (jira)": "{type: jira, base_url, jql, auth: pat|basic|browser, token_env (default JIRA_TOKEN) or token_file, email (basic), sso_url (browser), epic_field, api_version (2), search_path}.",
+  "ticket.repos": "Repos the agent may open PRs in. Empty: any repo in the workspace whose origin is the org's.",
+  "ticket.base_branches": "{\"repo\": \"develop\"} when a repo's PR base isn't origin/HEAD.",
+  "ticket.auto_check": "all (check every new ticket) or none (only on Check).",
+  "ticket.skip_types": "Ticket types never implemented (Epic).",
+  "ticket.checks_per_cycle, check_budget_usd, implement_budget_usd, check_timeout_minutes, implement_timeout_minutes": "Throughput, cost caps and timeouts.",
+  "ticket.draft_prs": "Open PRs as drafts.",
+  "ticket.dashboard_port": "Ticket desk port (8788).",
+  "ticket.conventions.pr_title, commit_subject": "Formats with {type}, {key}, {num}, {summary}. The PR title is validated against pr_title before pushing; commits must name the ticket.",
+  "ticket.conventions.branch": "Branch format with {type}, {key} (lowercased) and {slug}. Default '{type}/{key}-{slug}', e.g. '<alias>/{key}-{slug}'. Validated before pushing.",
+  "chat_review_skill": "Optional. The review skill to use when you ask for a review in chat (e.g. a personal one). Empty: pr-review.",
+  "ticket.max_parallel": "{check, implement, diagnose}: how many run at once (defaults 3, 2, 3, max 8). The ticket desk's Run settings change it live.",
+  "ticket.diagnose, diagnose_budget_usd, diagnose_timeout_minutes": "Explain every failed run automatically with a read-only Claude run (default on, $2 cap, 15 min). Usage-limit failures are never diagnosed, they resume after the reset.",
+  "review.policy": "{approve: silent | note, minor: private | post}. Written to references/policy.json and policy.md, enforced by post_review.py. Default silent and private.",
+  "attribution.mode": "none | disclose. none (the default) refuses any tool or AI mention in commits, PR text, reviews and replies. disclose has the kit add the disclosure itself: the git guard adds commit_trailer to every commit a run makes (git 2.32+), and post_review.py and the ticket agent end reviews, PR descriptions and replies with footer.",
+  "attribution.commit_trailer": "The trailer for disclose, 'Key: value'. Default 'Co-Authored-By: Claude <noreply@anthropic.com>'.",
+  "attribution.footer": "The last line of posted text for disclose. Default 'Drafted with Claude Code.'",
+  "style": "Style switches enforced on reviews and ticket PR bodies: no_emoji, no_headers, no_bold, no_tables, no_bullets, no_em_dash, no_thanks_opener, no_filler, no_severity_labels (booleans), max_words_inline, max_words_body (0 = no limit). All off by default; setup proposes values from the person's own writing.",
+  "profile_dir": "Optional. Folder in the kit holding the person's voice.md, rules.md and severity.md (default profile/, git-ignored).",
+  "ticket.rework_branch": "same (default) or new. Rework on a ticket with open PRs: same adds commits to the PR's own branch, new always starts a follow-up round on a new branch stacked on the open PR (or from the default branch when it is merged or closed), so a PR under review is never changed. Use new if you must never commit to an existing branch.",
+  "ticket.active_statuses": "List of status names that mean work is expected, e.g. [\"To Do\", \"In Progress\", \"Reopened\"] (a Jira workflow's names, or a Projects board's Status column). A ticket that has PRs and moves from any other status (Testing, In Review, Done) into one of these is flagged as came back, so the desk offers the rework and notifies you. Empty by default: then only a ticket that disappears from your list and returns is flagged.",
+  "ticket.pr_template": "\"repo\" (default): PR descriptions fill in the repo's own PR template (.github/pull_request_template.md and the usual places, on the default branch), checked before pushing. \"none\": no template.",
+  "ticket.tell_budget_usd, tell_timeout_minutes": "Cap and timeout for a Tell the agent run (default $2, 10 min). It is read-only: it reads the ticket, its PRs and the tracker and proposes a plan."
+ },
+ "files": [
+  {
+   "path": "kit.json",
+   "purpose": "This manifest",
+   "installs_to": null
+  },
+  {
+   "path": "IMPLEMENT.md",
+   "purpose": "Step-by-step runbook the setup session follows",
+   "installs_to": null,
+   "bytes": 14450,
+   "sha256": "ba612a73c015a5d0"
+  },
+  {
+   "path": "PROMPT.md",
+   "purpose": "The prompt to hand to Claude on the new machine",
+   "installs_to": null,
+   "bytes": 3055,
+   "sha256": "fac204527d5e6b50"
+  },
+  {
+   "path": "README.md",
+   "purpose": "Human overview",
+   "installs_to": null,
+   "bytes": 9382,
+   "sha256": "613954cb08bd39e6"
+  },
+  {
+   "path": "LICENSE",
+   "purpose": "The MIT license",
+   "installs_to": null,
+   "bytes": 1075,
+   "sha256": "5599239048609d41"
+  },
+  {
+   "path": "SECURITY.md",
+   "purpose": "How to report a vulnerability privately, and what's in scope",
+   "installs_to": null,
+   "bytes": 1552,
+   "sha256": "8ff8d4f5de320bf8"
+  },
+  {
+   "path": "CODE_OF_CONDUCT.md",
+   "purpose": "The Contributor Covenant 2.1, with the private reporting form as the contact",
+   "installs_to": null,
+   "bytes": 5695,
+   "sha256": "621bd02514c2ade8"
+  },
+  {
+   "path": "agents/agent-lib/frame.py",
+   "purpose": "What the desks' shared header and footer show: the kit version and links between the desks",
+   "installs_to": "~/.claude/agent-lib/frame.py",
+   "bytes": 1570,
+   "sha256": "de6cd014afa618c7"
+  },
+  {
+   "path": "agents/agent-lib/osglue.py",
+   "purpose": "Notifications, scheduler status and kick, login-shell env, shared",
+   "installs_to": "~/.claude/agent-lib/osglue.py",
+   "bytes": 4107,
+   "sha256": "25387d38a488a018"
+  },
+  {
+   "path": "agents/agent-lib/progress.py",
+   "purpose": "Streams each headless run's steps into a progress file the desks show live",
+   "installs_to": "~/.claude/agent-lib/progress.py",
+   "bytes": 8836,
+   "sha256": "3cb912c2a28a6d2b"
+  },
+  {
+   "path": "agents/agent-lib/runsettings.py",
+   "purpose": "Model and effort resolution and the gateway probe, shared",
+   "installs_to": "~/.claude/agent-lib/runsettings.py",
+   "bytes": 3600,
+   "sha256": "dca23aaa64728738"
+  },
+  {
+   "path": "agents/agent-lib/shims/gh",
+   "purpose": "Read-only gh guard put first on PATH for headless runs",
+   "installs_to": "~/.claude/agent-lib/shims/gh",
+   "bytes": 3458,
+   "sha256": "36d781b411260e33"
+  },
+  {
+   "path": "agents/agent-lib/shims/git",
+   "purpose": "git guard: no push, no changes in the user's checkouts, worktrees only under .local",
+   "installs_to": "~/.claude/agent-lib/shims/git",
+   "bytes": 3535,
+   "sha256": "623d6514bce5cbd5"
+  },
+  {
+   "path": "agents/pr-review-agent/agent.py",
+   "purpose": "The review agent, command prr",
+   "installs_to": "~/.claude/pr-review-agent/agent.py (linked as ~/.local/bin/prr)",
+   "bytes": 25603,
+   "sha256": "b08d85710e45292d"
+  },
+  {
+   "path": "agents/pr-review-agent/dashboard.html",
+   "purpose": "Review desk page",
+   "installs_to": "~/.claude/pr-review-agent/dashboard.html",
+   "bytes": 77624,
+   "sha256": "74c37297005753d9"
+  },
+  {
+   "path": "agents/pr-review-agent/dashboard.py",
+   "purpose": "Review desk server, 127.0.0.1 only",
+   "installs_to": "~/.claude/pr-review-agent/dashboard.py",
+   "bytes": 14442,
+   "sha256": "3462a9c0d00da305"
+  },
+  {
+   "path": "agents/ticket-agent/agent.py",
+   "purpose": "The ticket agent, command ptk",
+   "installs_to": "~/.claude/ticket-agent/agent.py (linked as ~/.local/bin/ptk)",
+   "bytes": 134463,
+   "sha256": "2659d84e60db3c4b"
+  },
+  {
+   "path": "agents/ticket-agent/dashboard.html",
+   "purpose": "Ticket desk page (renders Markdown and Jira markup safely)",
+   "installs_to": "~/.claude/ticket-agent/dashboard.html",
+   "bytes": 144290,
+   "sha256": "20a8f04a20326417"
+  },
+  {
+   "path": "agents/ticket-agent/dashboard.py",
+   "purpose": "Ticket desk server, 127.0.0.1 only",
+   "installs_to": "~/.claude/ticket-agent/dashboard.py",
+   "bytes": 20977,
+   "sha256": "5c1dd5e52050b31e"
+  },
+  {
+   "path": "agents/ticket-agent/trackers/__init__.py",
+   "purpose": "Tracker interface and loader",
+   "installs_to": "~/.claude/ticket-agent/trackers/__init__.py",
+   "bytes": 1278,
+   "sha256": "9a40937b417e1973"
+  },
+  {
+   "path": "agents/ticket-agent/trackers/github.py",
+   "purpose": "GitHub Issues and Projects tracker, read-only via gh",
+   "installs_to": "~/.claude/ticket-agent/trackers/github.py",
+   "bytes": 14359,
+   "sha256": "fb6699982a52ead6"
+  },
+  {
+   "path": "agents/ticket-agent/trackers/jira.py",
+   "purpose": "Jira tracker: PAT, Cloud API token or browser SSO",
+   "installs_to": "~/.claude/ticket-agent/trackers/jira.py",
+   "bytes": 13049,
+   "sha256": "739eb3efd2a0c606"
+  },
+  {
+   "path": "docs/design.md",
+   "purpose": "Architecture, flows, state machines, safety model",
+   "installs_to": null,
+   "bytes": 24890,
+   "sha256": "63ec86f29b8011af"
+  },
+  {
+   "path": "docs/lessons.md",
+   "purpose": "Problems hit so far and how the kit handles them",
+   "installs_to": null,
+   "bytes": 11440,
+   "sha256": "012363de54e0e256"
+  },
+  {
+   "path": "docs/images/review-desk.png",
+   "purpose": "README screenshot of the Review desk, from made-up demo data",
+   "installs_to": null,
+   "bytes": 160556,
+   "sha256": "b64dda26a309a6b6"
+  },
+  {
+   "path": "docs/images/ticket-desk.png",
+   "purpose": "README screenshot of the Ticket desk, from made-up demo data",
+   "installs_to": null,
+   "bytes": 229594,
+   "sha256": "449db74a29f64329"
+  },
+  {
+   "path": "install.py",
+   "purpose": "Installer: dry run by default, --apply writes, --load starts the scheduler",
+   "installs_to": null,
+   "bytes": 28885,
+   "sha256": "d898f77189b14e7e"
+  },
+  {
+   "path": "kit.config.example.json",
+   "purpose": "Settings to copy to kit.config.json and fill in",
+   "installs_to": null,
+   "bytes": 2483,
+   "sha256": "74a1dd6c691be0a1"
+  },
+  {
+   "path": "rules/CLAUDE.md",
+   "purpose": "Standing rules template; the person's own habits come from profile/rules.md and their review policy from the config",
+   "installs_to": "~/.claude/CLAUDE.md",
+   "bytes": 2027,
+   "sha256": "ec1a4bf928bc333c"
+  },
+  {
+   "path": "service/launchd.plist",
+   "purpose": "macOS scheduler template, one per agent",
+   "installs_to": "~/Library/LaunchAgents/<prefix>.<agent>.plist",
+   "bytes": 749,
+   "sha256": "5123cf481cb8fdad"
+  },
+  {
+   "path": "service/systemd.service",
+   "purpose": "Linux scheduler template (service)",
+   "installs_to": "~/.config/systemd/user/<prefix>.<agent>.service",
+   "bytes": 185,
+   "sha256": "e2696663346fd64b"
+  },
+  {
+   "path": "service/systemd.timer",
+   "purpose": "Linux scheduler template (timer)",
+   "installs_to": "~/.config/systemd/user/<prefix>.<agent>.timer",
+   "bytes": 181,
+   "sha256": "70b8e65b663b1242"
+  },
+  {
+   "path": "skills/pr-review/SKILL.md",
+   "purpose": "The review procedure (templated with the author)",
+   "installs_to": "~/.claude/skills/pr-review/SKILL.md",
+   "bytes": 21046,
+   "sha256": "338e4c860303c68b"
+  },
+  {
+   "path": "skills/pr-review/references/MAPPING.md",
+   "purpose": "How to map a project into its reference, with proof",
+   "installs_to": "~/.claude/skills/pr-review/references/MAPPING.md",
+   "bytes": 2727,
+   "sha256": "a4b1f49d440b8334"
+  },
+  {
+   "path": "skills/pr-review/references/_template.md",
+   "purpose": "Template for a project reference; install seeds references/<id>.md from it",
+   "installs_to": "~/.claude/skills/pr-review/references/_template.md",
+   "bytes": 3259,
+   "sha256": "6c88a45243f09e47"
+  },
+  {
+   "path": "skills/pr-review/references/voice.md",
+   "purpose": "Neutral voice template; setup writes the person's own voice to profile/voice.md, which installs instead",
+   "installs_to": "~/.claude/skills/pr-review/references/voice.md",
+   "bytes": 1863,
+   "sha256": "f3a8d3b7328f2b56"
+  },
+  {
+   "path": "skills/pr-review/scripts/diff_coverage.py",
+   "purpose": "Changed lines that no test runs, from lcov",
+   "installs_to": "~/.claude/skills/pr-review/scripts/diff_coverage.py",
+   "bytes": 4478,
+   "sha256": "5148ce3d9f85757d"
+  },
+  {
+   "path": "skills/pr-review/scripts/post_review.py",
+   "purpose": "Checks a draft against the real diff and the voice rules, then posts it as one review",
+   "installs_to": "~/.claude/skills/pr-review/scripts/post_review.py",
+   "bytes": 18345,
+   "sha256": "eb9b732b12fc1a23"
+  },
+  {
+   "path": "skills/pr-review/scripts/pr_worktree.sh",
+   "purpose": "Isolated review worktree plus base worktree, deps setup",
+   "installs_to": "~/.claude/skills/pr-review/scripts/pr_worktree.sh",
+   "bytes": 6308,
+   "sha256": "83a3f324b33c4fe3"
+  },
+  {
+   "path": "skills/ticket-work/SKILL.md",
+   "purpose": "Ticket assess and implement modes (templated)",
+   "installs_to": "~/.claude/skills/ticket-work/SKILL.md",
+   "bytes": 15323,
+   "sha256": "0e55cfab060387fb"
+  },
+  {
+   "path": "skills/ticket-work/scripts/ticket_worktree.sh",
+   "purpose": "New ticket branch from the latest default branch, in its own worktree",
+   "installs_to": "~/.claude/skills/ticket-work/scripts/ticket_worktree.sh",
+   "bytes": 5119,
+   "sha256": "f6fdac7207567658"
+  },
+  {
+   "path": "package.py",
+   "purpose": "Syncs this machine's mapped references into the kit, checks for drift, refreshes kit.json and writes dist/legwork-<version>.zip",
+   "installs_to": null,
+   "bytes": 5656,
+   "sha256": "45a36c90a4b1708c"
+  },
+  {
+   "path": "references/README.md",
+   "purpose": "Says your mapped project references land in this folder, git-ignored, and install seeds from them",
+   "installs_to": null,
+   "bytes": 602,
+   "sha256": "b0bd443e8537838b"
+  },
+  {
+   "path": ".gitignore",
+   "purpose": "Keeps kit.config.json, dist/ and caches out of the repo",
+   "installs_to": null,
+   "bytes": 248,
+   "sha256": "092ef46af0bacb5b"
+  },
+  {
+   "path": "CHANGELOG.md",
+   "purpose": "What changed in each version, for people pulling updates",
+   "installs_to": null,
+   "bytes": 19160,
+   "sha256": "dc79b936f25f0678"
+  },
+  {
+   "path": "skills/pr-review/references/suggestions.md",
+   "purpose": "How suggestion blocks work and how post_review.py checks them, the same for everyone",
+   "installs_to": "~/.claude/skills/pr-review/references/suggestions.md",
+   "bytes": 1542,
+   "sha256": "86e46b481113d9f1"
+  },
+  {
+   "path": "CONTRIBUTING.md",
+   "purpose": "How to change the kit safely: PRs, tests, versioning, what CI checks",
+   "installs_to": null,
+   "bytes": 3938,
+   "sha256": "3d7bcd293f56be61"
+  }
+ ],
+ "changes": [
+  "1.1.0: reviews approve silently (no body, no comments, minor points stay private); the desks show live progress of every Claude run",
+  "1.2.0: re-reviews resolve your earlier conversations the author fixed, when you post, with proof",
+  "1.3.0: configurable ticket branch format; review voice can send REQUEST_CHANGES with an empty body; a project reference's Severity section overrides the blocking list; desks get a glance strip, a theme switch and a sticky header",
+  "1.3.1: GitHub Projects tickets carry their sprint (iteration field); the ticket desk and ptk list group by sprint (current, upcoming, past, none) and sort by priority, with a Sprint/Stage switch",
+  "1.4.0: parallel runs (slot pools per job, queue ordered by sprint and priority); model and effort pickers next to every run button, and a change switches running agents live (stream-json control: set_model, apply_flag_settings) for both agents; failed runs get a plain explanation at once, an automatic read-only diagnosis (what happened, why, evidence, fix), and Fix it / Start over / PR step only buttons that resume the same session; Claude usage limits resume on their own after the reset; package.py keeps the kit in sync and zips it; mapped project references ship in references/",
+  "1.5.0: the ticket desk follows each PR on GitHub (draft or ready, review decision, merged or closed, CI, comments and reviews, bot reports apart) and the ticket's phase follows them (pr_open, merged, pr_closed); tickets that come back on the board are flagged; Rework (desk button or ptk rework) adds commits to the same PR branch the agent created, fast-forward only and checked like a new PR, or opens a follow-up PR when merged; pause no longer stops reading the tracker and PRs; tracker timeouts no longer crash the cycle; pause and resume are logged",
+  "1.5.1: review comments start with the requested change itself, never with thanks; post_review.py refuses a comment or body that opens with thanks",
+  "1.6.0: shared privately for early use; a README for new users (clone, set up, costs, safety, updates, changing it); CHANGELOG.md; mapped project references are stored with placeholders ({{WORKSPACE}}, {{AUTHOR_FIRST}}, {{MEMORY_INDEX}}) and rendered from each person's config; setup asks about the branch naming, the review voice and a personal chat review skill; the coverage tools setup is in the reference; the installer skips cache files",
+  "1.7.0: nothing personal ships in the kit. Each person's voice, working habits and review bar live in profile/ (git-ignored) and their config; setup learns them from their own review comments, PR text and commits and confirms them (IMPLEMENT.md 2b). review.policy (approve silent or note, minor points private or posted) and style switches (emoji, headers, bold, tables, em dashes, thanks openers, filler, word limits) are per person and enforced by post_review.py from the generated references/policy.json; voice.md is a neutral template; suggestion mechanics moved to references/suggestions.md; project references hold repo facts only; lessons and README carry no one's history",
+  "1.8.0: safe contributions. A test suite (152 tests, no Claude or GitHub needed) covers the gh and git guards, the posting checks, ticket pushes and rework, agent decisions, the live switch, the desks' HTTP security, the installer and repo hygiene (no secrets or personal data, versioned releases); CI runs it on every PR on Linux and macOS with pinned actions and a read-only token; CODEOWNERS, a PR template, CONTRIBUTING.md and Dependabot. Guard fixes: gh api -XPOST, GraphQL mutations in query files, gh auth/extension/ruleset writes, and git --git-dir/--work-tree/GIT_DIR, remote and config changes can no longer reach GitHub or a person's checkout",
+  "1.8.1: the ticket desk can refresh PR status on demand: a Refresh PR status button (all tickets), a Refresh now link on each ticket's PR card, `ptk prs`, and an automatic read when a ticket with stale PRs is opened; a failed read keeps the last known state",
+  "1.9.0: a rework can carry screenshots: choose files or paste them on the ticket desk's rework form, or `ptk rework KEY \"...\" --image FILE`; they're saved as ticket attachments (images only, checked by content) and the rework run reads each one",
+  "1.10.0: follow-up rounds: with ticket.rework_branch \"new\" a rework never commits to an existing branch; it starts round 2, 3, ... on a new branch stacked on the earlier PR while it is open (or from the default branch once merged), with its own worktree (ticket_worktree.sh --round), and the PR base is checked; rework.md lists the earlier PRs and the ticket's new comments",
+  "1.10.1: a ticket with PRs that moves from Testing (or any status outside ticket.active_statuses) back to a working status is flagged as came back, once per move, so the desk marks it and notifies you; off until the statuses are listed",
+  "1.11.0: a rework answers PR comments in place instead of in the PR description. rework.md gives each comment a reply id; the run writes replies into the manifest; the agent checks them before pushing (a real comment on the ticket's PRs, not a bot, once, the person's style) and refuses a PR body that quotes or addresses a reviewer; after the push it replies in the review thread for inline comments and with a quoting PR comment for the others, also on earlier PRs in follow-up rounds ({new_pr}); the desk marks comments Replied and lists replies under each rework",
+  "1.12.0: ticket PRs follow the repo's own PR template (ticket.pr_template, default \"repo\"). conventions.md points the run at it; before pushing, the agent checks every section is there, in order and filled, with no placeholder left; the person's style switches judge the wording only (lint_text structure=False); the Refs ticket line is skipped when the body links the ticket already; a rework rewrites an old description into the template; fix: a failed PR check whose commit id contained 401, 403 or 529 was explained as a sign-in, model or rate problem (PR check errors are explained first now, and status codes match whole numbers)",
+  "1.13.0: a rework, and a Fix it during one, starts from the PR branch as it is on GitHub: commits pushed by hand (a conflict resolved, a suggestion) are taken, a force-pushed branch is adopted when the agent has nothing unpushed, and the run is told what changed; the agent always works in its own worktree under .local/wt (detached when someone else has the branch checked out, pushed by name); the PR step checks only the rework's own commits, so a merge of the base branch passes; a Fix it during a rework stays a rework; fix: progress writes from two threads at once raced",
+  "1.14.0: a PR the agent opened that conflicts with its base gets a Fix button on the ticket desk: the agent merges the base into its own PR branch, resolves the conflict with your instructions, runs the tests and pushes the merge fast-forward; GitHub's own merge status shows the conflict",
+  "1.15.0: a Tell the agent box on every ticket (plain words in, a plan made of the desk's own actions out, nothing changes until Do it; a closed ticket is only marked closed when the tracker or GitHub agrees, and comes back if the tracker reopens it); both desks get a new look: a turn rail on every row, a plain summary sentence instead of tiles, serif for what people and the agent wrote, one action place per ticket, one column on narrow screens",
+  "1.16.0: both desks get a real app frame: a header with the product mark, a switch between the Reviews and Tickets desks (with what waits for you on this one), the theme, then this desk's name, status and actions; and a footer that says what the desks will and won't do and which kit version is installed",
+  "1.17.0: the desks come back by themselves: each scheduled cycle starts its desk when it isn't up (after a restart or a crash), never after `dashboard stop`, and a desk saved from before a restart is no longer taken for a running one; runs started from a desk get the scheduler's low CPU priority (nice 10); the ticket pane scrolls as one, so a tall head (a Tell plan) no longer hides the body, and it isn't a live region any more",
+  "1.18.0: one input on the ticket desk: the Tell box is pinned to the bottom of the ticket pane and the rework, fix, answer and note boxes are gone, Tell does all of it (new actions: link_pr, context, approve, fix); a PR you opened by hand can be linked to the ticket (your own, open, not a fork) and reworks add commits to its branch; every rework merges the latest base branch first (ticket.rework_merge_base, default on) and the PR step refuses a push without it; a failure whose diagnosis needs you is no longer offered as Fix it again",
+  "1.18.1: one scroll on the ticket desk: the page is the only thing that scrolls; the ticket pane flows with it, the Tell exchange shows in full above the input, the input grows with what you type and stays pinned to the bottom of the screen, and code, commands and error output wrap instead of scrolling sideways",
+  "1.18.2: one composer on every ticket: the text box, a paperclip for screenshots and Send sit in one row and a short hint under it, always visible, whatever state the ticket is in (before, Send and Attach showed only on focus or while a plan was open)",
+  "1.19.0: both desks look Apple-made: SF system type, Apple's system colours (accessible variants where text sits, every text colour 4.5:1 on every surface in light and dark, an Increase Contrast answer), grouped sheets, capsule buttons, segmented switches, a translucent one-row toolbar from 1000px, and a Messages-style composer and conversation; no web fonts and no theme switch, the desks follow the system; from the design review: summary counts are whole clickable phrases, the plan's button says what it starts and what it can cost, two-line hint and 56px toolbar instead of 30% of the window, suggestions in the composer, 'PR approved' in the list, no duplicate model picker, and linking a PR replaces the earlier run's summary",
+  "1.19.1: the Tell conversation is kept and shown in full: every exchange stays in the ticket's state, older ones come back from the log and their saved plans, and the desk shows the thread with a time over each exchange, your message and the agent's reply in full, earlier plans folded to one line, what came of each, and the last three open with the rest behind 'Show earlier messages'; fix: a finished exchange was squeezed to one line and its bubble clipped",
+  "2.0.0: first public release, as legwork (MIT): your mapped project references stay on your machine (references/ is git-ignored), an attribution setting (none, the default, or disclose, where the kit adds a commit trailer and a footer itself), a README for anyone, LICENSE, SECURITY.md, a code of conduct and issue templates. Commands, install paths, scheduler labels and CLAUDE.md markers are unchanged, so an install upgrades in place."
+ ]
+}

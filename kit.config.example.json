@@ -1,0 +1,115 @@
+{
+  "author": {
+    "name": "Your Name",
+    "email": "you@example.com"
+  },
+  "github_host": "github.com",
+  "components": [
+    "pr-review",
+    "ticket"
+  ],
+  "projects": [
+    {
+      "id": "acme",
+      "org": "acme",
+      "label": "Acme",
+      "workspace": "~/code/acme",
+      "memory_index": ""
+    }
+  ],
+  "commit_rule": "",
+  "chat_review_skill": "",
+  "style": {
+    "no_emoji": false,
+    "no_headers": false,
+    "no_bold": false,
+    "no_tables": false,
+    "no_bullets": false,
+    "no_em_dash": false,
+    "no_thanks_opener": false,
+    "no_filler": false,
+    "no_severity_labels": false,
+    "max_words_inline": 0,
+    "max_words_body": 0
+  },
+  "attribution": {
+    "mode": "none",
+    "commit_trailer": "Co-Authored-By: Claude <noreply@anthropic.com>",
+    "footer": "Drafted with Claude Code."
+  },
+  "binaries": {
+    "python": "",
+    "claude": "",
+    "gh": "",
+    "git": ""
+  },
+  "run_path": "",
+  "scheduler": "",
+  "service_prefix": "",
+  "shell_env": [
+    "ANTHROPIC_BASE_URL",
+    "ANTHROPIC_AUTH_TOKEN",
+    "ANTHROPIC_API_KEY"
+  ],
+  "interval_minutes": 10,
+  "notify": true,
+  "review": {
+    "orgs": [],
+    "max_reviews_per_cycle": 2,
+    "max_budget_usd": 20,
+    "review_timeout_minutes": 60,
+    "max_attempts_per_commit": 2,
+    "skip_authors": [],
+    "default_effort": "high",
+    "dashboard_port": 8787,
+    "policy": {
+      "approve": "silent",
+      "minor": "private"
+    }
+  },
+  "ticket": {
+    "project": "acme",
+    "label": "Acme",
+    "tracker": {
+      "type": "github",
+      "scope": [
+        "org:acme"
+      ],
+      "query": "",
+      "project": null,
+      "key_prefixes": {},
+      "type_labels": {},
+      "issue_line": "Refs {ref}"
+    },
+    "repos": [],
+    "base_branches": {},
+    "auto_check": "all",
+    "skip_types": [
+      "Epic"
+    ],
+    "checks_per_cycle": 2,
+    "check_budget_usd": 4,
+    "implement_budget_usd": 40,
+    "check_timeout_minutes": 25,
+    "implement_timeout_minutes": 150,
+    "draft_prs": true,
+    "dashboard_port": 8788,
+    "conventions": {
+      "pr_title": "{type}({key}): {summary}",
+      "commit_subject": "{type}({key}): {summary}",
+      "branch": "{type}/{key}-{slug}"
+    },
+    "max_parallel": {
+      "check": 3,
+      "implement": 2,
+      "diagnose": 3
+    },
+    "diagnose": true,
+    "diagnose_budget_usd": 2,
+    "diagnose_timeout_minutes": 15,
+    "rework_branch": "same",
+    "rework_merge_base": true,
+    "active_statuses": [],
+    "pr_template": "repo"
+  }
+}

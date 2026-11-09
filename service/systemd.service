@@ -1,0 +1,9 @@
+[Unit]
+Description={{LABEL}} cycle
+
+[Service]
+Type=oneshot
+Environment=PATH={{RUN_PATH}}
+ExecStart={{PYTHON}} {{AGENT}} cycle
+StandardOutput=append:{{LOG}}
+StandardError=append:{{LOG}}

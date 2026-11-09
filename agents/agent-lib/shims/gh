@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+# read-only gh for the unattended agents: blocks every GitHub write
+import json
+import os
+import sys
+
+GUARD = json.load(open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "guard.json")))
+REAL = GUARD["real_gh"]
+args = sys.argv[1:]
+
+
+def block(why):
+    sys.stderr.write(f"blocked by the agent's gh guard (read-only): {why}\n")
+    sys.exit(1)
+
+
+def query_files(a):
+    """The text of query files passed as -F query=@file or --input file. Unreadable counts as a mutation."""
+    out = []
+    for i, x in enumerate(a):
+        path = None
+        if x in ("-F", "--field") and i + 1 < len(a) and "=@" in a[i + 1]:
+            path = a[i + 1].split("=@", 1)[1]
+        elif x.startswith("--field=") and "=@" in x[8:]:
+            path = x[8:].split("=@", 1)[1]
+        elif x == "--input" and i + 1 < len(a):
+            path = a[i + 1]
+        elif x.startswith("--input="):
+            path = x.split("=", 1)[1]
+        if path:
+            try:
+                out.append(sys.stdin.read() if path == "-" else open(path).read())
+            except OSError:
+                out.append("mutation")
+    return out
+
+
+def api_is_write(a):
+    method, endpoint, has_fields, i = None, None, False, 0
+    while i < len(a):
+        x = a[i]
+        if x in ("-X", "--method") and i + 1 < len(a):
+            method = a[i + 1].upper(); i += 2; continue
+        if x.startswith("--method="):
+            method = x.split("=", 1)[1].upper()
+        elif x.startswith("-X") and len(x) > 2:
+            method = x[2:].upper()
+        elif x in ("-f", "-F", "--field", "--raw-field", "--input") or x.startswith(("--field=", "--raw-field=", "--input=")):
+            has_fields = True
+            if x in ("-f", "-F", "--field", "--raw-field", "--input"):
+                i += 1
+        elif x in ("-H", "--header", "-q", "--jq", "-t", "--template", "--hostname", "--cache", "-p", "--preview"):
+            i += 1
+        elif not x.startswith("-") and endpoint is None:
+            endpoint = x
+        i += 1
+    if endpoint == "graphql":
+        return any("mutation" in x for x in a) or any("mutation" in text for text in query_files(a))
+    return (method or ("POST" if has_fields else "GET")) != "GET"
+
+
+if args[:1] == ["api"] and api_is_write(args[1:]):
+    block("gh api write call")
+if args[:1] == ["pr"] and len(args) > 1 and args[1] in {
+        "review", "comment", "merge", "close", "edit", "create", "ready", "reopen", "lock", "unlock", "update-branch"}:
+    block(f"gh pr {args[1]}")
+if args[:1] == ["issue"] and len(args) > 1 and args[1] not in {"view", "list", "status"}:
+    block(f"gh issue {args[1]}")
+if args[:1] == ["project"] and len(args) > 1 and args[1] not in {"view", "list", "field-list", "item-list"}:
+    block(f"gh project {args[1]}")
+if args[:1] in (["repo"], ["release"], ["workflow"], ["run"], ["secret"], ["variable"], ["label"], ["gist"],
+                ["ruleset"], ["cache"], ["org"], ["ssh-key"], ["gpg-key"], ["codespace"]) \
+        and len(args) > 1 and args[1] not in {"view", "list", "status", "clone", "check"}:
+    block(f"gh {args[0]} {args[1]}")
+# changing the login, its scopes or installing extensions is never the agents' business
+if args[:1] == ["auth"] and args[1:2] not in (["status"], ["token"]):
+    block(f"gh auth {' '.join(args[1:2])}")
+if args[:1] in (["extension"], ["ext"]) and args[1:2] not in (["list"], ["ls"]):
+    block("gh extension")
+os.execv(REAL, [REAL, *args])

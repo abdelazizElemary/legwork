@@ -1,0 +1,14 @@
+# your own settings and machine files
+kit.config.json
+dist/
+*.bak
+.DS_Store
+__pycache__/
+*.pyc
+.playwright-mcp/
+profile/
+.venv/
+.pytest_cache/
+# maps of your own projects: install seeds from them, they never ship
+references/*
+!references/README.md
