@@ -14,7 +14,7 @@ prr doctor           check gh, git, claude and the scheduler
 prr dashboard [stop] open the local dashboard in the browser, or stop it
 prr settings [--model M] [--effort E]   show or change the model and effort reviews use
 prr review <pr> --model M --effort E    the same, for one PR
-prr models           re-check which models the gateway allows
+prr models           re-check which models your Claude setup allows
 <pr> is a PR URL, org/repo#N or repo#N.
 """
 
@@ -453,7 +453,7 @@ def cmd_settings(_):
 
 def cmd_models(_):
     data = RS.load(RUN_SETTINGS, ["review"])
-    print("asking the gateway which models it allows, a few cents each")
+    print("checking which models your Claude setup allows, a few cents each")
     data["models"] = RS.probe(CLAUDE, claude_env(), str(HOME)) or data["models"]
     data["models_checked_at"] = now()
     RS.save(RUN_SETTINGS, data)
@@ -510,7 +510,7 @@ def cmd_doctor(_):
     for tool in ("node", "npm", "uv", "python3", "jq"):
         found = any((Path(p) / tool).exists() for p in RUN_PATH.split(":"))
         check(f"{tool} on the run PATH", found)
-    # no --model here: some gateways only allow the default model
+    # no --model here: some setups only allow the default model
     r = subprocess.run([CLAUDE, "-p", "Reply with exactly: ok", "--output-format", "json",
                         "--max-budget-usd", "1"], capture_output=True, text=True, timeout=180,
                        cwd=str(HOME), env=claude_env())

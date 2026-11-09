@@ -330,5 +330,5 @@ def test_commit_ids_never_look_like_http_errors(ticket_agent):
         f = {"step": "pr", "message": f"demo: commit {sha} isn't authored and committed by X",
              "errors": [f"demo: commit {sha} isn't authored and committed by X"]}
         assert e(f)["title"] == "The PR checks failed, so nothing was pushed", sha
-    assert "isn't allowed" in e({"step": "check", "result_text": "API Error: 403 team not allowed"})["title"]
+    assert "isn't allowed" in e({"step": "check", "result_text": "API Error: 403 model not allowed for this key"})["title"]
     assert "sign in" in e({"step": "check", "result_text": "API Error: 401"})["title"]

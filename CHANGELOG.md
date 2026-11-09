@@ -2,6 +2,10 @@
 
 The newest first. `kit.json` has the same list.
 
+## 2.0.1
+
+Neutral wording. The model check and the desks talk about your Claude setup instead of a gateway, since most people use Claude Code directly, and the docs and tests no longer assume one. Nothing else changes.
+
 ## 2.0.0
 
 The first public release, under a new name: legwork. It keeps track of your daily assigned tasks and the PRs waiting for your review, and does the legwork on them with Claude Code. Nothing else about how it runs changes: the `prr` and `ptk` commands, the install paths under `~/.claude`, the scheduler labels and the CLAUDE.md markers are the same, so `install.py --apply --force` upgrades an existing install in place.
