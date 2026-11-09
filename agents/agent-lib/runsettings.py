@@ -90,7 +90,7 @@ def describe(model, effort, data=None):
 
 
 def probe(claude, env, cwd):
-    """Ask the gateway which models it allows, with a tiny prompt each. Costs a few cents per allowed model."""
+    """Ask which models this Claude setup allows, with a tiny prompt each. Costs a few cents per allowed model."""
     found = []
     for m in CANDIDATES:
         out = subprocess.run([str(claude), "-p", "Reply with exactly: ok", "--model", m, "--effort", "low",

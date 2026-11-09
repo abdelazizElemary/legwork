@@ -1123,7 +1123,7 @@ async function openSettings() {
   m.innerHTML = `<h2 id="settingsTitle">Run settings</h2>
     <p>The model and effort the agent uses. A PR's own choice in its drawer wins over this default.</p>
     <div class="job"><h3>Reviews</h3>${pickerHtml(rs.defaults.review || {}, "default")}</div>
-    <div class="models">Your gateway allows ${allowed || "no tested models yet"}${rs.checked_at ? `, last checked ${esc(ago(rs.checked_at))}` : ""}.
+    <div class="models">Your Claude setup allows ${allowed || "no tested models yet"}${rs.checked_at ? `, last checked ${esc(ago(rs.checked_at))}` : ""}.
       ${rs.checking ? "Checking now…" : `<button class="link" data-act="probe">Check which models work</button>`}</div>
     <footer><button class="btn" data-act="close-settings">Cancel</button><button class="btn primary" data-act="save-settings">Save</button></footer>`;
   $("#settingsScrim").hidden = false; m.hidden = false;

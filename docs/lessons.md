@@ -6,11 +6,11 @@ when something fails.
 ## Running headless under a scheduler
 
 - **"Not logged in" in scheduled runs only.** launchd and systemd don't read `~/.zshrc` or `~/.bashrc`, so
-  gateway credentials exported there are missing. The agents read the vars named in `shell_env` from an
+  credentials exported there (an API key, or a proxy URL and token) are missing. The agents read the vars named in `shell_env` from an
   interactive login shell when they're not in the environment (`osglue.claude_env`). Put the real var names
   in `shell_env`.
-- **An LLM gateway may only allow some models.** A 403 like "team not allowed to access model" means that model
-  is off for this account. `prr models` probes which ones answer. The doctor's health check passes no
+- **Some setups only allow some models.** A 403 that says a model isn't allowed means that model is off for this
+  account or key. `prr models` probes which ones answer. The doctor's health check passes no
   `--model` on purpose.
 - **Auto mode can block the skill's own scripts in unattended runs.** The agents pass allow rules for
   `bash .../pr_worktree.sh`, `python3 .../diff_coverage.py` and `python3 .../post_review.py`, and the review
@@ -135,8 +135,8 @@ when something fails.
 
 ## Your own PR (kit 1.18)
 
-- **A rework on a PR opened by hand looped.** The person asked to continue on their own PR, the run did the work, and
-  the agent refused to push to a branch it hadn't created. Each "Fix it" or Tell rework ran into the same wall, and the
+- **A rework on a PR opened by hand looped.** Asked to continue on a PR it hadn't opened, the run did the work, and
+  then the agent refused to push to a branch it hadn't created. Each "Fix it" or Tell rework ran into the same wall, and the
   only way out was a manual push. PRs can be linked now, and a failure that needs the person isn't offered as a rerun.
 - **Five text boxes were too many.** Rework, fix, answer, note and Tell each had one, and it wasn't clear which did
   what. Tell does all of it now, from one box at the bottom.

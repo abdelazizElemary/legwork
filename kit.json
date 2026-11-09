@@ -1,6 +1,6 @@
 {
  "name": "legwork",
- "version": "2.0.0",
+ "version": "2.0.1",
  "created": "2026-10-13",
  "entry_point": "README.md for people, PROMPT.md (which points to IMPLEMENT.md) for Claude",
  "summary": "Keeps track of your daily assigned tasks and the PRs waiting for your review, and does the legwork with Claude Code. Two unattended agents with local desks: a PR review agent that drafts reviews in your voice and never posts by itself, and a ticket agent that checks your assigned tickets (GitHub Issues, GitHub Projects or Jira), asks for missing context, and after your approval implements them as draft PRs per repo.",
@@ -127,7 +127,7 @@
   "run_path": "PATH for headless runs. Empty to build it from the binaries and common tools found.",
   "scheduler": "launchd, systemd, cron or none. Empty to pick by OS.",
   "service_prefix": "Scheduler label prefix, e.g. com.yourname. Empty for com.<user>.",
-  "shell_env": "Env var names the headless claude needs that only the shell rc sets (gateway URL and token). Read from a login shell when missing.",
+  "shell_env": "Env var names the headless claude needs that only the shell rc sets (an API key, or a proxy URL and token). Read from a login shell when missing.",
   "interval_minutes": "Poll interval for both agents.",
   "notify": "Desktop notifications.",
   "review.orgs": "Orgs the review agent watches (default: every project org).",
@@ -179,8 +179,8 @@
    "path": "IMPLEMENT.md",
    "purpose": "Step-by-step runbook the setup session follows",
    "installs_to": null,
-   "bytes": 14450,
-   "sha256": "ba612a73c015a5d0"
+   "bytes": 14461,
+   "sha256": "f403c18395989195"
   },
   {
    "path": "PROMPT.md",
@@ -240,10 +240,10 @@
   },
   {
    "path": "agents/agent-lib/runsettings.py",
-   "purpose": "Model and effort resolution and the gateway probe, shared",
+   "purpose": "Model and effort resolution and the model probe, shared",
    "installs_to": "~/.claude/agent-lib/runsettings.py",
-   "bytes": 3600,
-   "sha256": "dca23aaa64728738"
+   "bytes": 3603,
+   "sha256": "4e413d592df94fe3"
   },
   {
    "path": "agents/agent-lib/shims/gh",
@@ -263,15 +263,15 @@
    "path": "agents/pr-review-agent/agent.py",
    "purpose": "The review agent, command prr",
    "installs_to": "~/.claude/pr-review-agent/agent.py (linked as ~/.local/bin/prr)",
-   "bytes": 25603,
-   "sha256": "b08d85710e45292d"
+   "bytes": 25612,
+   "sha256": "ccbf75fdc3221744"
   },
   {
    "path": "agents/pr-review-agent/dashboard.html",
    "purpose": "Review desk page",
    "installs_to": "~/.claude/pr-review-agent/dashboard.html",
-   "bytes": 77624,
-   "sha256": "74c37297005753d9"
+   "bytes": 77629,
+   "sha256": "c1e03cea0572db5c"
   },
   {
    "path": "agents/pr-review-agent/dashboard.py",
@@ -284,15 +284,15 @@
    "path": "agents/ticket-agent/agent.py",
    "purpose": "The ticket agent, command ptk",
    "installs_to": "~/.claude/ticket-agent/agent.py (linked as ~/.local/bin/ptk)",
-   "bytes": 134463,
-   "sha256": "2659d84e60db3c4b"
+   "bytes": 134474,
+   "sha256": "2c7d730c66e8f273"
   },
   {
    "path": "agents/ticket-agent/dashboard.html",
    "purpose": "Ticket desk page (renders Markdown and Jira markup safely)",
    "installs_to": "~/.claude/ticket-agent/dashboard.html",
-   "bytes": 144290,
-   "sha256": "20a8f04a20326417"
+   "bytes": 144295,
+   "sha256": "7d981d2d86573499"
   },
   {
    "path": "agents/ticket-agent/dashboard.py",
@@ -326,15 +326,15 @@
    "path": "docs/design.md",
    "purpose": "Architecture, flows, state machines, safety model",
    "installs_to": null,
-   "bytes": 24890,
-   "sha256": "63ec86f29b8011af"
+   "bytes": 24936,
+   "sha256": "6b78a7c8fff30cac"
   },
   {
    "path": "docs/lessons.md",
    "purpose": "Problems hit so far and how the kit handles them",
    "installs_to": null,
-   "bytes": 11440,
-   "sha256": "012363de54e0e256"
+   "bytes": 11466,
+   "sha256": "1e07c327de4292f6"
   },
   {
    "path": "docs/images/review-desk.png",
@@ -480,8 +480,8 @@
    "path": "CHANGELOG.md",
    "purpose": "What changed in each version, for people pulling updates",
    "installs_to": null,
-   "bytes": 19160,
-   "sha256": "dc79b936f25f0678"
+   "bytes": 19380,
+   "sha256": "75076256db8279d9"
   },
   {
    "path": "skills/pr-review/references/suggestions.md",
@@ -525,6 +525,7 @@
   "1.18.2: one composer on every ticket: the text box, a paperclip for screenshots and Send sit in one row and a short hint under it, always visible, whatever state the ticket is in (before, Send and Attach showed only on focus or while a plan was open)",
   "1.19.0: both desks look Apple-made: SF system type, Apple's system colours (accessible variants where text sits, every text colour 4.5:1 on every surface in light and dark, an Increase Contrast answer), grouped sheets, capsule buttons, segmented switches, a translucent one-row toolbar from 1000px, and a Messages-style composer and conversation; no web fonts and no theme switch, the desks follow the system; from the design review: summary counts are whole clickable phrases, the plan's button says what it starts and what it can cost, two-line hint and 56px toolbar instead of 30% of the window, suggestions in the composer, 'PR approved' in the list, no duplicate model picker, and linking a PR replaces the earlier run's summary",
   "1.19.1: the Tell conversation is kept and shown in full: every exchange stays in the ticket's state, older ones come back from the log and their saved plans, and the desk shows the thread with a time over each exchange, your message and the agent's reply in full, earlier plans folded to one line, what came of each, and the last three open with the rest behind 'Show earlier messages'; fix: a finished exchange was squeezed to one line and its bubble clipped",
-  "2.0.0: first public release, as legwork (MIT): your mapped project references stay on your machine (references/ is git-ignored), an attribution setting (none, the default, or disclose, where the kit adds a commit trailer and a footer itself), a README for anyone, LICENSE, SECURITY.md, a code of conduct and issue templates. Commands, install paths, scheduler labels and CLAUDE.md markers are unchanged, so an install upgrades in place."
+  "2.0.0: first public release, as legwork (MIT): your mapped project references stay on your machine (references/ is git-ignored), an attribution setting (none, the default, or disclose, where the kit adds a commit trailer and a footer itself), a README for anyone, LICENSE, SECURITY.md, a code of conduct and issue templates. Commands, install paths, scheduler labels and CLAUDE.md markers are unchanged, so an install upgrades in place.",
+  "2.0.1: neutral wording: the model check talks about your Claude setup instead of a gateway, and the docs and tests no longer assume one."
  ]
 }

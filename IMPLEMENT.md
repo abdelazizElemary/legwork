@@ -53,7 +53,7 @@ Detect, don't ask, wherever you can:
 | commit and PR conventions | `gh pr list --repo ORG/REPO --state merged --limit 30 --json title,headRefName` and `git log origin/<default> -30 --format=%s`. Look for a ticket id format, conventional-commit types and branch names |
 | tracker | where the user's tickets live: `gh search issues --assignee @me --state open --limit 20 --json repository,number,title` on the host. If they use a Projects board: `gh project list --owner ORG` (needs `gh auth refresh -s read:project`) and the board's Status field and its done columns (`gh project field-list N --owner ORG`) |
 | key prefixes | GitHub issues get keys like `WEB-42`. The default prefix is the repo name in capitals. Pick short prefixes per issue repo if the names are long, and confirm with the user |
-| models | after install, `prr models` asks the gateway which models work (a few cents) |
+| models | after install, `prr models` checks which models your Claude setup can use (a few cents) |
 
 Then ask the user, in one round, only for what's still open. Usual questions:
 - Which orgs should the review agent watch? (default: every project org)

@@ -16,7 +16,7 @@ ptk login                       sign in to the tracker in the agent's Chrome win
 ptk pause | resume | doctor | dashboard [stop|--no-open]
 ptk settings [check|implement|diagnose] [--model M] [--effort E]   show or change the defaults
 ptk check|approve <KEY> --model M --effort E               the same, for one ticket
-ptk models                      re-check which models the gateway allows
+ptk models                      re-check which models your Claude setup allows
 """
 
 import calendar
@@ -2474,7 +2474,7 @@ def cmd_settings(arg):
 
 def cmd_models(_):
     data = RS.load(RUN_SETTINGS, JOBS)
-    print("asking the gateway which models it allows, a few cents each")
+    print("checking which models your Claude setup allows, a few cents each")
     data["models"] = RS.probe(CLAUDE, claude_env(), str(HOME)) or data["models"]
     data["models_checked_at"] = now()
     RS.save(RUN_SETTINGS, data)

@@ -1915,7 +1915,7 @@ async function openSettings() {
     <div class="job"><h3>Run at once</h3><div class="par">
       ${[["check", "Checks"], ["implement", "Implementations"], ["diagnose", "Diagnoses"]].map(([j, l]) => `<label>${l} <input type="number" min="1" max="${rs.max_slots || 8}" data-par="${j}" id="par-${j}" value="${(rs.parallel || {})[j] || 1}"></label>`).join("")}
       </div><p>Each implementation runs in its own worktrees and branches, so they don't touch each other. More at once means more CPU and more spend at the same time.</p></div>
-    <div class="models">Your gateway allows ${allowed || "no tested models yet"}${rs.checked_at ? `, last checked ${esc(ago(rs.checked_at))}` : ""}.
+    <div class="models">Your Claude setup allows ${allowed || "no tested models yet"}${rs.checked_at ? `, last checked ${esc(ago(rs.checked_at))}` : ""}.
       ${rs.checking ? "Checking now…" : `<button class="link" data-act="probe">Check which models work</button>`}</div>
     <footer><button class="btn" data-act="close-settings">Cancel</button><button class="btn primary" data-act="save-settings">Save</button></footer>`;
   $("#settingsScrim").hidden = false; m.hidden = false;

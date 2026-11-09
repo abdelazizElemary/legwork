@@ -266,7 +266,8 @@ upgrade (tested on 2.1.296 and 2.1.299).
 
 `runsettings.py` resolves, in order: the job's own choice (per PR in `overrides.json`, per ticket in its
 state's `run_settings`), the agent's default (`run_settings.json`), then the user's own Claude default from
-`~/.claude/settings.json` (no flag passed). Some gateways only allow some models, so `prr models` and
+`~/.claude/settings.json` (no flag passed). Some setups (an API proxy, or a key limited to some models) only allow
+some models, so `prr models` and
 `ptk models` (or "Check which models work" on either desk) probe the candidates with a tiny prompt and keep
 the list of models that answered. Efforts: low, medium, high, xhigh, max.
 
